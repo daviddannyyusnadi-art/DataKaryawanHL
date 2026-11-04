@@ -50,17 +50,25 @@ input:focus,button:focus-visible{outline:3px solid color-mix(in srgb,var(--pri) 
  </section>
 
  <section id="vMain" hidden>
+  <div class="msg" id="e3" role="status"></div>
+  <div class="card" id="prev" hidden>
+   <b id="pt"></b>
+   <img id="pimg" alt="Pratinjau foto">
+   <div class="two" style="margin-top:12px"><button class="btn out" id="ulang" type="button">Ulangi foto</button><button class="btn" id="kirim" type="button">Kirim</button></div>
+  </div>
   <div class="card">
    <h2 id="hi"></h2>
    <div class="stat"><span>Masuk</span><span id="sm">-</span></div>
    <div class="stat"><span>Pulang</span><span id="sp">-</span></div>
    <div class="two"><button class="btn" id="bm" type="button">Absen masuk</button><button class="btn out" id="bk" type="button">Absen pulang</button></div>
    <div class="hint" style="margin-top:8px">Tekan tombol, ambil foto selfie wajah Anda, lalu kirim.</div>
-   <div id="prev" hidden>
-    <img id="pimg" alt="Pratinjau selfie">
-    <div class="two" style="margin-top:12px"><button class="btn out" id="ulang" type="button">Ulangi foto</button><button class="btn" id="kirim" type="button">Kirim</button></div>
-   </div>
-   <div class="msg" id="e3" role="status"></div>
+  </div>
+  <div class="card">
+   <h2>ID card</h2>
+   <div class="stat"><span>Diambil</span><span id="ia">-</span></div>
+   <div class="stat"><span>Dikembalikan</span><span id="ik">-</span></div>
+   <div class="two"><button class="btn" id="bia" type="button">Ambil ID card</button><button class="btn out" id="bik" type="button">Kembalikan ID card</button></div>
+   <div class="hint" style="margin-top:8px">Foto ID card sebagai bukti. Pastikan tulisan dan fotonya terlihat jelas.</div>
   </div>
   <button class="lnk" id="out" type="button">Keluar</button>
  </section>
@@ -103,25 +111,27 @@ $("#bp1").onclick=async()=>{
 
 async function main(){
  try{const s=await api("status");if(s.perluPin)return show("vPin");
-  show("vMain");$("#hi").textContent="Halo, "+s.nama;$("#sm").textContent=s.masuk||"-";$("#sp").textContent=s.pulang||"-";
+  show("vMain");$("#hi").textContent="Halo, "+s.nama;$("#sm").textContent=s.masuk||"-";$("#sp").textContent=s.pulang||"-";$("#ia").textContent=s.idAmbil||"-";$("#ik").textContent=s.idKembali||"-";$("#bia").disabled=!!s.idAmbil;$("#bik").disabled=!!s.idKembali;
   $("#bm").disabled=!!s.masuk;$("#bk").disabled=!s.masuk;$("#ulang").disabled=$("#kirim").disabled=false;resetPrev()}
  catch(e){msg("e1",e.message,"bad")}}
 function resetPrev(){foto="";$("#prev").hidden=true;$("#cam").value=""}
-const pick=a=>{aksi=a;msg("e3","");$("#cam").value="";$("#cam").click()};
-$("#bm").onclick=()=>pick("masuk");$("#bk").onclick=()=>pick("pulang");$("#ulang").onclick=()=>pick(aksi);
+const LB={masuk:"Selfie absen masuk",pulang:"Selfie absen pulang",idambil:"Foto ID card (pengambilan)",idkembali:"Foto ID card (pengembalian)"};
+const pick=a=>{aksi=a;msg("e3","");$("#cam").setAttribute("capture",a.startsWith("id")?"environment":"user");$("#cam").value="";$("#cam").click()};
+$("#bia").onclick=()=>pick("idambil");$("#bik").onclick=()=>pick("idkembali");$("#bm").onclick=()=>pick("masuk");$("#bk").onclick=()=>pick("pulang");$("#ulang").onclick=()=>pick(aksi);
 
 $("#cam").onchange=e=>{
  const f=e.target.files[0];if(!f)return;
  const rd=new FileReader();rd.onload=()=>{const im=new Image();im.onload=()=>{
-  const sc=Math.min(1,720/Math.max(im.width,im.height)),c=document.createElement("canvas");c.width=im.width*sc;c.height=im.height*sc;
+  const sc=Math.min(1,(aksi.startsWith("id")?1100:720)/Math.max(im.width,im.height)),c=document.createElement("canvas");c.width=im.width*sc;c.height=im.height*sc;
   c.getContext("2d").drawImage(im,0,0,c.width,c.height);foto=c.toDataURL("image/jpeg",.72);
-  $("#pimg").src=foto;$("#prev").hidden=false};im.onerror=()=>msg("e3","Foto tidak bisa dibaca. Coba lagi.","bad");im.src=rd.result};rd.readAsDataURL(f)};
+  $("#pimg").src=foto;$("#pt").textContent=LB[aksi];$("#prev").hidden=false;$("#prev").scrollIntoView({behavior:"smooth"})};im.onerror=()=>msg("e3","Foto tidak bisa dibaca. Coba lagi.","bad");im.src=rd.result};rd.readAsDataURL(f)};
 
 $("#kirim").onclick=async()=>{
  if(!foto)return;const bs=document.querySelectorAll("#vMain button");bs.forEach(b=>b.disabled=true);msg("e3","Mengirim…");
  try{const l=await pos();
-  const j=await api("absen",{method:"POST",body:JSON.stringify({aksi,foto,...(l||{})})});
-  msg("e3",j.sudah?`Absen masuk Anda sudah tercatat pukul ${j.jam} WIB.`:`Absen ${aksi} berhasil, pukul ${j.jam} WIB.`,"ok");
+  const j=await api(aksi.startsWith("id")?"idcard":"absen",{method:"POST",body:JSON.stringify({aksi,foto,...(l||{})})});
+  const t={masuk:"Absen masuk",pulang:"Absen pulang",idambil:"Pengambilan ID card",idkembali:"Pengembalian ID card"}[aksi];
+  msg("e3",j.sudah?`${t} sudah tercatat pukul ${j.jam} WIB.`:`${t} berhasil, pukul ${j.jam} WIB.`,"ok");window.scrollTo(0,0);
   await main();
  }catch(e){msg("e3",e.message,"bad");bs.forEach(b=>b.disabled=false);}};
 $("#out").onclick=()=>{tok="";try{sessionStorage.removeItem("etok")}catch(e){}resetPrev();show("vLogin")};
