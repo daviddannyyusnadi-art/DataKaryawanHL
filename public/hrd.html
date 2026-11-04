@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex"><title>Database Karyawan HRD</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{--bg:#f3f6f8;--card:#fff;--ink:#14212b;--mut:#5d6b77;--line:#d3dce3;--pri:#0f5c7a;--pri-ink:#fff;--err:#b3261e;--ok:#1b7a4b;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f171d;--card:#18232b;--ink:#e8eef2;--mut:#93a3af;--line:#2b3a45;--pri:#4fb3d9;--pri-ink:#06222e;--err:#ff8a80;--ok:#6fd49c}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{background:var(--card);border-bottom:1px solid var(--line);padding:14px 16px}
+h1{font-size:18px;margin:0}.sub{color:var(--mut);font-size:13px}
+.tabs{display:flex;background:var(--card);border-bottom:1px solid var(--line)}
+.tabs button{flex:1;padding:13px;font:inherit;font-weight:600;background:none;border:0;border-bottom:3px solid transparent;color:var(--mut);cursor:pointer}
+.tabs button[aria-selected=true]{color:var(--pri);border-color:var(--pri)}
+main{max-width:900px;margin:0 auto;padding:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px}
+.btn{font:inherit;font-weight:600;background:var(--pri);color:var(--pri-ink);border:0;border-radius:10px;padding:12px 16px;min-height:46px;cursor:pointer}
+.btn:disabled{opacity:.5;cursor:default}.btn.g{background:none;border:1.5px solid var(--pri);color:var(--pri)}
+input[type=file],input[type=search],input[type=password],input[type=date]{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1.5px solid var(--line);border-radius:10px;padding:11px;min-height:46px}
+.st{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}
+.st div{background:var(--bg);border-radius:10px;padding:10px;text-align:center}.st b{display:block;font-size:22px}.st span{font-size:12px;color:var(--mut)}
+.ok b{color:var(--ok)}.bad b{color:var(--err)}
+.err{font-size:13px;color:var(--err);margin:4px 0}
+.mut{color:var(--mut);font-size:13px}
+.wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13.5px;min-width:560px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{color:var(--mut);font-weight:600}
+.pg{height:8px;background:var(--line);border-radius:4px;overflow:hidden;margin:10px 0}.pg i{display:block;height:100%;width:0;background:var(--pri)}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.ck,#all{width:20px;height:20px}td a{color:var(--pri);margin-right:8px}[hidden]{display:none!important}</style>
+</head>
+<body>
+<header><h1>Database karyawan</h1><div class="sub" id="who">Memuat…</div></header>
+<div class="tabs" id="tabs" hidden role="tablist"><button role="tab" aria-selected="true" data-t="imp">Impor massal</button><button role="tab" aria-selected="false" data-t="dat">Data tersimpan</button><button role="tab" aria-selected="false" data-t="abs">Absensi</button></div>
+<main>
+<section id="lg" class="card"><b>Masuk HRD</b><p class="mut">Masukkan kata sandi HRD.</p><input type="password" id="pw" autocomplete="current-password" placeholder="Kata sandi"><div class="row"><button class="btn" id="lgb">Masuk</button></div><div class="err" id="lge"></div></section>
+<section id="imp" hidden>
+ <div class="card">
+  <b>Unggah spreadsheet</b>
+  <p class="mut">Gunakan file <i>database-karyawan.xlsx</i> (sheet “Data Karyawan”) atau CSV dengan judul kolom yang sama. NIK jadi kunci: NIK yang sudah ada akan diperbarui, bukan digandakan.</p>
+  <input type="file" id="file" accept=".xlsx,.xls,.csv">
+  <div id="res"></div>
+ </div>
+</section>
+<section id="dat" hidden>
+ <div class="card">
+  <input type="search" id="q" placeholder="Cari nama, NIK, atau departemen">
+  <div class="row"><span class="mut" id="cnt" style="align-self:center">0 karyawan</span><button class="btn g" id="del" disabled style="margin-left:auto;color:var(--err);border-color:var(--err)">Hapus terpilih</button><button class="btn g" id="rpin" disabled>Reset PIN terpilih</button><button class="btn g" id="exp">Unduh Excel</button></div>
+ </div>
+ <div class="card wrap"><table><thead><tr><th><input type="checkbox" id="all" aria-label="Pilih semua"></th><th>Nama</th><th>NIK</th><th>Departemen</th><th>Posisi</th><th>HP (WA)</th><th>Usia</th><th>Berkas</th></tr></thead><tbody id="tb"></tbody></table><div class="mut" id="emp" style="padding-top:10px"></div></div>
+</section>
+<section id="abs" hidden>
+ <div class="card"><div class="row" style="margin-top:0"><input type="date" id="ad" style="flex:1;min-width:150px"><button class="btn g" id="aex">Unduh Excel bulan ini</button></div>
+  <div class="st" id="as"></div></div>
+ <div class="card wrap"><table><thead><tr><th>Nama</th><th>Departemen</th><th>Masuk</th><th>Pulang</th><th>Lokasi</th><th>Foto selfie</th></tr></thead><tbody id="atb"></tbody></table></div>
+</section>
+</main>
+<script>
+const H=["Timestamp Registrasi","Email Address","Nama Lengkap Sesuai KTP","Tempat Lahir","Tanggal Lahir","Usia","Status Perkawinan","Jenis Kelamin","Agama","Departemen (Divisi)","Posisi / Jabatan 1","Posisi / Jabatan 2","Posisi / Jabatan 3","Posisi / Jabatan 4","Posisi / Jabatan 5","Posisi / Jabatan 6","Posisi / Jabatan 7","Alamat Domisili","RT (Domisili)","RW (Domisili)","Kelurahan (Domisili)","Kecamatan (Domisili)","Kota (Domisili)","Provinsi (Domisili)","NIK (KTP)","Nomor KK","Alamat Lengkap Sesuai KTP","RT (KTP)","RW (KTP)","Kelurahan (KTP)","Kecamatan (KTP)","Kota (KTP)","Provinsi (KTP)","Kode Pos","Nomor HP (WA)","Nomor HP 2","Nomor HP Darurat","Nama Kontak Darurat","Hubungan Kontak Darurat","Nama Ibu Kandung","Nama Ayah Kandung","Status Tempat Tinggal","Nomor BPJS Kesehatan","Nomor BPJS Ketenagakerjaan","Pendidikan Terakhir","Nama Sekolah/Universitas","Jurusan / Bidang Keahlian","Tahun Kelulusan","Nomor NPWP","Nomor Rekening","Nama Bank","Link Foto Buku Tabungan","Link Foto KTP","Link Foto SIM","Link Foto KK","Link Surat Lamaran","Link CV","Link Ijazah","Link Foto Diri"];
+const NAME="Nama Lengkap Sesuai KTP",NIK="NIK (KTP)",$=s=>document.querySelector(s);
+const norm=s=>String(s).toLowerCase().replace(/[^a-z0-9]/g,"");
+const MAP=Object.fromEntries(H.map(h=>[norm(h),h]));
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+let col=null,rows=[],valid=[];
+
+document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{
+ document.querySelectorAll(".tabs button").forEach(x=>x.setAttribute("aria-selected",x===b));
+ $("#imp").hidden=b.dataset.t!=="imp";$("#dat").hidden=b.dataset.t!=="dat";$("#abs").hidden=b.dataset.t!=="abs";if(b.dataset.t==="abs"){abBulan="";loadAbs()}});
+
+function parseDate(v){v=String(v||"").trim();let m;
+ if(m=v.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/)){let y=+m[3];if(y<100)y+=y>30?1900:2000;return iso(y,+m[2],+m[1])}
+ if(m=v.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/))return iso(+m[1],+m[2],+m[3]);return ""}
+function iso(y,m,d){const t=new Date(y,m-1,d);return t.getMonth()===m-1&&t.getDate()===d?`${y}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")}`:""}
+function age(i){if(!i)return"";const b=new Date(i),n=new Date();let a=n.getFullYear()-b.getFullYear();if(n.getMonth()<b.getMonth()||(n.getMonth()===b.getMonth()&&n.getDate()<b.getDate()))a--;return a}
+const digits=v=>String(v||"").replace(/[\s.\-]/g,"");
+
+function check(r){const e=[];
+ if(!r[NAME])e.push("nama kosong");
+ if(!/^\d{16}$/.test(r[NIK]))e.push("NIK harus 16 digit");
+ if(r["Nomor KK"]&&!/^\d{16}$/.test(r["Nomor KK"]))e.push("KK harus 16 digit");
+ if(r["Email Address"]&&!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(r["Email Address"]))e.push("email tidak valid");
+ if(r["Nomor HP (WA)"]&&!/^(\+62|62|0)8\d{7,12}$/.test(r["Nomor HP (WA)"]))e.push("HP (WA) tidak valid");
+ if(r["Tanggal Lahir"]===false)e.push("tanggal lahir tidak terbaca");
+ return e}
+
+$("#file").onchange=async e=>{
+ const f=e.target.files[0];if(!f)return;const R=$("#res");R.innerHTML='<p class="mut">Membaca file…</p>';
+ try{
+  const wb=XLSX.read(await f.arrayBuffer(),{type:"array",raw:true});
+  const ws=wb.Sheets["Data Karyawan"]||wb.Sheets[wb.SheetNames[0]];
+  const raw=XLSX.utils.sheet_to_json(ws,{defval:"",raw:false});
+  if(!raw.length)throw new Error("File tidak berisi data.");
+  const keys=Object.keys(raw[0]),ign=[],hit=new Set();
+  const km={};keys.forEach(k=>{const h=MAP[norm(k)];h?(km[k]=h,hit.add(h)):ign.push(k)});
+  if(!hit.has(NIK)||!hit.has(NAME))throw new Error("Kolom “Nama Lengkap Sesuai KTP” dan “NIK (KTP)” tidak ditemukan. Pakai judul kolom dari template.");
+  const seen=new Set(),errs=[];valid=[];let blank=0;
+  raw.forEach((x,i)=>{
+   const r={};for(const k in km)r[km[k]]=String(x[k]??"").trim();
+   if(!Object.values(r).some(Boolean)){blank++;return}
+   ["NIK (KTP)","Nomor KK"].forEach(h=>r[h]=digits(r[h]));
+   r["Tanggal Lahir"]=r["Tanggal Lahir"]?(parseDate(r["Tanggal Lahir"])||false):"";
+   const er=check(r);if(r[NIK]&&seen.has(r[NIK]))er.push("NIK ganda di file");seen.add(r[NIK]);
+   if(er.length)return errs.push({n:i+2,nama:r[NAME],er});
+   r["Tanggal Lahir"]=r["Tanggal Lahir"]||"";r["Usia"]=String(age(r["Tanggal Lahir"]));
+   valid.push(r)});
+  R.innerHTML=`<div class="st"><div><b>${raw.length-blank}</b><span>baris terbaca</span></div><div class="ok"><b>${valid.length}</b><span>siap disimpan</span></div><div class="bad"><b>${errs.length}</b><span>perlu diperbaiki</span></div></div>`
+   +(ign.length?`<p class="mut">Kolom diabaikan (judul tidak dikenali): ${esc(ign.join(", "))}</p>`:"")
+   +errs.slice(0,40).map(x=>`<div class="err">Baris ${x.n} ${esc(x.nama)}: ${esc(x.er.join(", "))}</div>`).join("")
+   +(errs.length>40?`<p class="mut">…dan ${errs.length-40} baris lain.</p>`:"")
+   +(errs.length?'<p class="mut">Baris bermasalah tidak ikut disimpan. Perbaiki di spreadsheet lalu unggah ulang; data yang sudah masuk tidak akan terganda.</p>':"")
+   +(valid.length?`<div class="pg" hidden><i></i></div><div class="row"><button class="btn" id="go">Simpan ${valid.length} karyawan</button></div><p class="mut" id="stat"></p>`:"");
+  const go=$("#go");if(go)go.onclick=save;
+ }catch(x){R.innerHTML=`<div class="err">${esc(x.message||"File tidak bisa dibaca.")}</div>`}
+};
+
+async function save(){
+ const b=$("#go"),p=$(".pg"),bar=p.firstChild;b.disabled=true;p.hidden=false;let n=0,fail=0;
+ for(let i=0;i<valid.length;i+=100){const part=valid.slice(i,i+100);
+  try{await api("import",{method:"POST",body:JSON.stringify({rows:part})})}catch(e){fail+=part.length}
+  n+=part.length;bar.style.width=(n/valid.length*100)+"%";$("#stat").textContent=`Menyimpan ${n} dari ${valid.length}…`}
+ $("#stat").textContent=fail?`${valid.length-fail} tersimpan, ${fail} gagal. Coba unggah ulang file yang sama.`:`Selesai: ${valid.length} karyawan tersimpan.`;
+ b.disabled=false;b.textContent="Simpan lagi";try{await load()}catch(e){}
+}
+
+let all=[];const LBL={fKtp:"KTP",fKk:"KK",fDiri:"Foto",fTab:"Tabungan",fIjz:"Ijazah",fCv:"CV",fLam:"Lamaran",fSim:"SIM"};
+function draw(){
+ const q=$("#q").value.toLowerCase(),L=all.filter(r=>[r[NAME],r[NIK],r["Departemen (Divisi)"]].join(" ").toLowerCase().includes(q));
+ FL=L;updDel();$("#cnt").textContent=`${L.length} dari ${all.length} karyawan`;
+ $("#tb").innerHTML=L.slice(0,300).map(r=>`<tr><td><input type="checkbox" class="ck" data-n="${esc(r[NIK])}"${SEL.has(r[NIK])?" checked":""}></td><td>${esc(r[NAME])}</td><td>${esc(r[NIK])}</td><td>${esc(r["Departemen (Divisi)"])}</td><td>${esc(r["Posisi / Jabatan 1"])}</td><td>${esc(r["Nomor HP (WA)"])}</td><td>${esc(age(r["Tanggal Lahir"]))}</td><td>${(r.berkas||[]).map(k=>`<a href="#" data-n="${esc(r[NIK])}" data-k="${k}">${LBL[k]||k}</a>`).join(" ")}</td></tr>`).join("");
+ $("#emp").textContent=all.length?(L.length>300?"Menampilkan 300 pertama. Persempit pencarian.":""):"Belum ada data. Mulai dari tab Impor massal."}
+$("#q").oninput=draw;
+
+$("#exp").onclick=()=>{
+ const data=all.map(r=>{const o={};H.forEach(h=>o[h]=h==="Usia"?age(r["Tanggal Lahir"]):(r[h]??""));return o});
+ const w=XLSX.utils.book_new(),s=XLSX.utils.json_to_sheet(data,{header:H});s["!cols"]=H.map(h=>({wch:Math.max(16,h.length+2)}));
+ XLSX.utils.book_append_sheet(w,s,"Data Karyawan");
+ XLSX.writeFile(w,"database-karyawan-"+new Date().toISOString().slice(0,10)+".xlsx")};
+
+$("#tb").onclick=async e=>{const a=e.target.closest("a[data-k]");if(!a)return;e.preventDefault();const w=window.open("","_blank");
+ try{const r=await api(`berkas?nik=${a.dataset.n}&key=${a.dataset.k}`);w.location=URL.createObjectURL(await r.blob())}catch(x){if(w)w.close();alert("Berkas tidak bisa dibuka.")}};
+
+let tok="";try{tok=sessionStorage.getItem("tok")||""}catch(e){}
+async function api(path,opt={}){
+ const r=await fetch("/api/"+path,{...opt,headers:{...(opt.headers||{}),Authorization:"Bearer "+tok,"Content-Type":"application/json"}});
+ if(r.status===401){tok="";try{sessionStorage.removeItem("tok")}catch(e){}showLogin();throw new Error("auth")}
+ if(!r.ok)throw new Error("HTTP "+r.status);return r}
+async function load(){all=await(await api("karyawan")).json();all.sort((a,b)=>String(a[NAME]).localeCompare(String(b[NAME])));draw()}
+function showLogin(){$("#lg").hidden=false;$("#tabs").hidden=true;$("#imp").hidden=true;$("#dat").hidden=true;$("#abs").hidden=true;$("#who").textContent="Silakan masuk"}
+async function enter(){$("#lg").hidden=true;$("#tabs").hidden=false;$("#imp").hidden=false;$("#who").textContent="Khusus HRD";try{await load()}catch(e){$("#emp").textContent="Gagal memuat data."}}
+async function login(){
+ $("#lge").textContent="";$("#lgb").disabled=true;
+ try{const r=await fetch("/api/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({password:$("#pw").value})});
+  const j=await r.json();if(!r.ok)throw new Error(j.error||"gagal");
+  tok=j.token;try{sessionStorage.setItem("tok",tok)}catch(e){}$("#pw").value="";enter()
+ }catch(e){$("#lge").textContent=e.message==="Failed to fetch"?"Tidak ada koneksi.":"Gagal masuk: "+e.message}
+ $("#lgb").disabled=false}
+$("#lgb").onclick=login;$("#pw").onkeydown=e=>{if(e.key==="Enter")login()};
+const SEL=new Set();let FL=[],AB=[],abBulan="";
+function updDel(){const n=SEL.size,b=$("#del");b.disabled=!n;$("#rpin").disabled=!n;b.textContent=n?`Hapus terpilih (${n})`:"Hapus terpilih";$("#all").checked=FL.length>0&&FL.every(r=>SEL.has(r[NIK]))}
+$("#tb").addEventListener("change",e=>{const c=e.target.closest(".ck");if(!c)return;c.checked?SEL.add(c.dataset.n):SEL.delete(c.dataset.n);updDel()});
+$("#all").onchange=e=>{FL.forEach(r=>e.target.checked?SEL.add(r[NIK]):SEL.delete(r[NIK]));draw()};
+$("#del").onclick=async()=>{const ids=[...SEL];if(!ids.length)return;
+ if(!confirm(`Hapus ${ids.length} karyawan beserta berkasnya? Tindakan ini tidak bisa dibatalkan.`))return;
+ if(ids.length>5&&prompt("Ketik HAPUS (huruf besar) untuk konfirmasi")!=="HAPUS")return;
+ $("#del").disabled=true;let fail=0;
+ for(let i=0;i<ids.length;i+=20){const part=ids.slice(i,i+20);try{await api("hapus",{method:"POST",body:JSON.stringify({niks:part})})}catch(e){fail+=part.length}}
+ SEL.clear();try{await load()}catch(e){}if(fail)alert(`${fail} data gagal dihapus. Coba lagi.`)};
+const wibToday=()=>new Date(Date.now()+7*36e5).toISOString().slice(0,10);
+async function loadAbs(){const d=$("#ad");if(!d.value)d.value=wibToday();const m=d.value.slice(0,7);
+ if(m!==abBulan){try{AB=await(await api("absensi?bulan="+m)).json();abBulan=m}catch(e){return}}drawAbs()}
+function drawAbs(){const d=$("#ad").value,mp=Object.fromEntries(AB.filter(x=>x.tanggal===d).map(x=>[x.nik,x]));
+ const rows=all.map(r=>({r,a:mp[r[NIK]]})).sort((x,y)=>(!!y.a-!!x.a)||String(x.r[NAME]).localeCompare(String(y.r[NAME])));
+ const hadir=rows.filter(x=>x.a).length;
+ $("#as").innerHTML=`<div class="ok"><b>${hadir}</b><span>sudah absen</span></div><div class="bad"><b>${rows.length-hadir}</b><span>belum absen</span></div><div><b>${rows.length}</b><span>total</span></div>`;
+ const maps=l=>l?`<a href="https://maps.google.com/?q=${esc(l)}" target="_blank" rel="noopener">Peta</a>`:"";
+ $("#atb").innerHTML=rows.map(({r,a})=>`<tr><td>${esc(r[NAME])}</td><td>${esc(r["Departemen (Divisi)"])}</td><td>${a?esc(a.masuk||"-"):"-"}</td><td>${a?esc(a.pulang||"-"):"-"}</td><td>${a?maps(a.lokMasuk):""}</td><td>${a?["masuk","pulang"].filter(k=>a["foto"+(k==="masuk"?"Masuk":"Pulang")]).map(k=>`<a href="#" data-f="${k}" data-d="${d}" data-n="${esc(a.nik)}">${k==="masuk"?"Masuk":"Pulang"}</a>`).join(" "):""}</td></tr>`).join("")}
+$("#ad").onchange=loadAbs;
+$("#aex").onclick=()=>{const dep=Object.fromEntries(all.map(r=>[r[NIK],r["Departemen (Divisi)"]]));
+ const data=[...AB].sort((a,b)=>a.tanggal.localeCompare(b.tanggal)||String(a.nama).localeCompare(String(b.nama))).map(a=>({Tanggal:a.tanggal,NIK:a.nik,Nama:a.nama,Departemen:dep[a.nik]||"",Masuk:a.masuk||"",Pulang:a.pulang||"","Lokasi masuk":a.lokMasuk||"","Lokasi pulang":a.lokPulang||""}));
+ if(!data.length)return alert("Belum ada data absensi bulan ini.");
+ const w=XLSX.utils.book_new();XLSX.utils.book_append_sheet(w,XLSX.utils.json_to_sheet(data),"Absensi");XLSX.writeFile(w,"absensi-"+abBulan+".xlsx")};
+$("#rpin").onclick=async()=>{const ids=[...SEL];if(!ids.length)return;
+ if(!confirm(`Reset PIN ${ids.length} karyawan? Mereka harus membuat PIN baru memakai tanggal lahir (DDMMYYYY).`))return;
+ try{for(let i=0;i<ids.length;i+=50)await api("resetpin",{method:"POST",body:JSON.stringify({niks:ids.slice(i,i+50)})});alert("PIN berhasil direset.")}catch(e){alert("Gagal mereset PIN.")}};
+$("#atb").onclick=async e=>{const a=e.target.closest("a[data-f]");if(!a)return;e.preventDefault();const w=window.open("","_blank");
+ try{const r=await api(`selfie?tanggal=${a.dataset.d}&nik=${a.dataset.n}&aksi=${a.dataset.f}`);w.location=URL.createObjectURL(await r.blob())}catch(x){if(w)w.close();alert("Foto tidak bisa dibuka.")}};
+tok?enter():showLogin();
+</script>
+</body>
+</html>
