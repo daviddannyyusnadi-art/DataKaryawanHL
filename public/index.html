@@ -62,6 +62,7 @@ nav button{flex:1;min-height:50px;border-radius:12px;font:inherit;font-weight:70
 const ENDPOINT = "/api/register";
 
 const OPT = {
+ dept:["Production","ME","Logistic","HR","Warehouse","Lainnya"],
  kawin:["Belum Menikah","Menikah","Cerai Hidup","Cerai Mati"],
  jk:["Laki-laki","Perempuan"],
  agama:["Islam","Kristen Protestan","Katolik","Hindu","Buddha","Konghucu","Lainnya"],
@@ -85,7 +86,7 @@ const S = [
   ["ibu","Nama lengkap ibu kandung","t",1],
   ["ayah","Nama lengkap ayah kandung","t",1],
   ["tinggal","Status tempat tinggal","s",1,"tinggal"]]},
- {t:"Posisi kerja",f:[["dept","Departemen (divisi)","t",1]],pos:1},
+ {t:"Posisi kerja",f:[["dept","Departemen (divisi)","s",1,"dept"],["deptLain","Sebutkan departemen","t",0]],pos:1},
  {t:"Alamat",addr:1},
  {t:"Kontak & dokumen negara",f:[
   ["hp","Nomor handphone (WA)","tel",1],
@@ -144,7 +145,7 @@ function render(){
  $("#back").style.visibility=step&&!sent?"visible":"hidden";
  $("#next").textContent=step===S.length-1?"Kirim pendaftaran":"Lanjut";
  if(sent)$("#nav").style.display="none";
- window.scrollTo(0,0);save();
+ syncDept();window.scrollTo(0,0);save();
 }
 
 function drawPos(){
@@ -164,6 +165,7 @@ function readFile(file,k){
    c.width=im.width*sc;c.height=im.height*sc;c.getContext("2d").drawImage(im,0,0,c.width,c.height);done(c.toDataURL("image/jpeg",.78))};im.src=r.result};
  r.readAsDataURL(file)}
 
+function syncDept(){const b=box("deptLain");if(b)b.hidden=D.dept!=="Lainnya"}
 const box=k=>document.querySelector(`[data-f="${k}"]`);
 function err(k,m){const b=box(k);if(!b)return;b.classList.add("bad");b.querySelector(".msg").textContent=m}
 function clr(k){const b=box(k);if(b)b.classList.remove("bad")}
@@ -181,6 +183,7 @@ app.addEventListener("input",e=>{
 app.addEventListener("change",e=>{
  const t=e.target;
  if(t.dataset.k)D[t.dataset.k]=t.value,clr(t.dataset.k),save();
+ if(t.dataset.k==="dept")syncDept();
  if(t.dataset.file&&t.files[0])readFile(t.files[0],t.dataset.file);
  if(t.id==="same"){sameAddr=t.checked;$("#dom").innerHTML=sameAddr?"":addrBlock("dom_","Alamat tempat tinggal (domisili)");save()}
 });
@@ -205,6 +208,7 @@ function validate(){
   if(k==="tglLahir"&&+calcAge(v)<17)bad(k,"Usia minimal 17 tahun");
  };
  (s.f||[]).forEach(f=>chk(f[0],f[1],f[2],f[3],f[4]));
+ if(s.pos&&D.dept==="Lainnya"&&!(D.deptLain||"").trim())bad("deptLain","Sebutkan nama departemen");
  if(s.pos&&!positions[0].trim())bad("p0","Isi minimal satu posisi");
  if(s.addr){const ps=sameAddr?["ktp_"]:["ktp_","dom_"];ps.forEach(p=>{ADDR.forEach(a=>chk(p+a[0],a[1],a[2],1,0));});chk("ktp_pos","Kode pos","n",1,5)}
  if(s.up)s.up.forEach(u=>{if(u[2]&&!files[u[0]])bad(u[0],"Dokumen ini wajib diunggah")});
@@ -215,6 +219,7 @@ function validate(){
 function payload(withFiles){
  const o={...D};if(sameAddr)ADDR.forEach(a=>o["dom_"+a[0]]=D["ktp_"+a[0]]);
  o.posisi=positions.map(p=>p.trim()).filter(Boolean);
+ o.dept=D.dept==="Lainnya"?("Lainnya: "+(D.deptLain||"").trim()):D.dept;
  o.dikirim=new Date().toISOString();
  if(withFiles){o.berkas=files}else{o.berkas=Object.keys(files).map(k=>k+": "+files[k].name)}
  return o}
@@ -240,10 +245,10 @@ $("#next").onclick=async()=>{
    if(r.status===409)throw new Error("dup");if(!r.ok)throw 0}
   b.textContent="Menyimpan data…";
   const r2=await fetch("/api/register",{method:"POST",headers:H,body:JSON.stringify(payload(false))});
-  if(r2.status===409)throw new Error("dup");if(!r2.ok)throw 0
+  if(r2.status===409)throw new Error("dup");if(!r2.ok)throw 0;window.__nip=((await r2.json().catch(()=>({}))).nip)||""
   sent=true;try{localStorage.removeItem("reg_draft")}catch(e){}
   $("#nav").style.display="none";$("#prog").style.width="100%";
-  app.innerHTML=`<div class="done"><b>Pendaftaran selesai</b><p>Terima kasih, ${esc(D.nama)}. Data Anda sudah dicatat.</p>${ENDPOINT?"":'<div class="note">Mode demo: belum ada server penerima. Salin data di bawah dan kirim ke HRD.</div><button class="ghost" id="copy" type="button">Salin data</button>'}</div>`;
+  app.innerHTML=`<div class="done"><b>Pendaftaran selesai</b><p>Terima kasih, ${esc(D.nama)}. Data Anda sudah dicatat.</p>${window.__nip?`<p>NIP Anda: <b>${esc(window.__nip)}</b></p>`:""}${ENDPOINT?"":'<div class="note">Mode demo: belum ada server penerima. Salin data di bawah dan kirim ke HRD.</div><button class="ghost" id="copy" type="button">Salin data</button>'}</div>`;
  }catch(e){b.disabled=false;b.textContent="Kirim pendaftaran";alert(e&&e.message==="dup"?"NIK ini sudah terdaftar. Hubungi HRD jika data perlu diubah.":"Gagal mengirim. Periksa koneksi lalu coba lagi.")}
 };
 render();
