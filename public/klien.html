@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Portal Klien - Data MCU</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{--bg:#f3f6f8;--card:#fff;--ink:#14212b;--mut:#5d6b77;--line:#d3dce3;--pri:#0f5c7a;--pri-ink:#fff;--err:#b3261e;--ok:#1b7a4b;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root{--bg:#0f171d;--card:#18232b;--ink:#e8eef2;--mut:#93a3af;--line:#2b3a45;--pri:#4fb3d9;--pri-ink:#06222e;--err:#ff8a80;--ok:#6fd49c}}
+*{box-sizing:border-box}[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:920px;margin:0 auto;padding:16px}
+h1{font-size:21px;margin:0}h2{font-size:17px;margin:0 0 8px}.mut{color:var(--mut);font-size:13px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin:12px 0}
+label{display:block;font-weight:600;font-size:13px;margin:10px 0 4px}
+input,select{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1.5px solid var(--line);border-radius:10px;padding:11px;min-height:46px}
+input:focus,select:focus,button:focus-visible{outline:3px solid color-mix(in srgb,var(--pri) 45%,transparent)}
+input[readonly]{opacity:.7}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}@media(max-width:560px){.grid{grid-template-columns:1fr}}
+.btn{font:inherit;font-weight:700;border:0;border-radius:10px;min-height:46px;padding:0 16px;background:var(--pri);color:var(--pri-ink);cursor:pointer}
+.btn.g{background:none;border:1.5px solid var(--pri);color:var(--pri)}.btn:disabled{opacity:.5}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;align-items:center}
+.st{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.st div{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center}.st b{display:block;font-size:24px}.st span{font-size:12px;color:var(--mut)}
+.ok b{color:var(--ok)}.bad b{color:var(--err)}
+.wrap{overflow-x:auto}table{border-collapse:collapse;width:100%;min-width:640px;font-size:14px}
+th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}th{color:var(--mut);font-weight:600;white-space:nowrap}
+.pill{display:inline-block;border-radius:20px;padding:2px 10px;font-size:12.5px;font-weight:700}
+.pill.s{background:color-mix(in srgb,var(--ok) 18%,transparent);color:var(--ok)}.pill.b{background:color-mix(in srgb,var(--err) 15%,transparent);color:var(--err)}
+.err{color:var(--err);font-size:13px;margin:3px 0}.msg{margin-top:10px;font-weight:600}.msg.ok2{color:var(--ok)}.msg.bad2{color:var(--err)}
+a{color:var(--pri);cursor:pointer;margin-right:10px}
+</style>
+</head>
+<body>
+<main>
+<section id="vLogin" class="card" style="max-width:420px;margin:40px auto">
+ <h1>Portal klien</h1><div class="mut">Data karyawan dan status MCU</div>
+ <label for="kd">Kode klien</label><input id="kd" autocapitalize="none" autocomplete="username">
+ <label for="ps">Kata sandi</label><input id="ps" type="password" autocomplete="current-password">
+ <div class="row"><button class="btn" id="lg" style="width:100%">Masuk</button></div>
+ <div class="msg bad2" id="le" role="alert"></div>
+</section>
+
+<section id="vMain" hidden>
+ <div class="row" style="margin:0"><div><h1 id="nm"></h1><div class="mut">Data MCU karyawan</div></div><button class="btn g" id="out" style="margin-left:auto">Keluar</button></div>
+ <div class="st" style="margin-top:12px"><div><b id="sT">0</b><span>total karyawan</span></div><div class="ok"><b id="sS">0</b><span>sudah MCU</span></div><div class="bad"><b id="sB">0</b><span>belum MCU</span></div></div>
+
+ <div class="card" id="fc">
+  <h2 id="ft">Tambah karyawan</h2>
+  <div class="grid">
+   <div><label for="fn">NIK (16 digit)</label><input id="fn" inputmode="numeric" maxlength="16"></div>
+   <div><label for="fm">Nama lengkap</label><input id="fm" maxlength="120"></div>
+   <div><label for="fs">Status MCU</label><select id="fs"><option value="">Pilih…</option><option>Sudah</option><option>Belum</option></select></div>
+   <div><label for="fd">Tanggal MCU</label><input id="fd" type="date"></div>
+  </div>
+  <label for="fk">Keterangan (opsional)</label><input id="fk" maxlength="300">
+  <div class="row"><button class="btn" id="fsave">Simpan</button><button class="btn g" id="fcancel" hidden>Batal ubah</button></div>
+  <div class="msg" id="fe" role="status"></div>
+ </div>
+
+ <div class="card">
+  <h2>Upload data (Excel atau CSV)</h2>
+  <div class="mut">Kolom: NIK, Nama, Status MCU (Sudah/Belum), Tanggal MCU (DD/MM/YYYY), Keterangan. Data dengan NIK yang sama akan diperbarui.</div>
+  <div class="row"><input type="file" id="file" accept=".xlsx,.xls,.csv" style="flex:1;min-width:200px"><button class="btn g" id="tpl">Unduh template</button></div>
+  <div id="ir"></div>
+ </div>
+
+ <div class="card">
+  <div class="row" style="margin-top:0"><input id="q" type="search" placeholder="Cari nama atau NIK" style="flex:1;min-width:160px"><select id="flt" style="width:auto"><option value="">Semua status</option><option>Sudah</option><option>Belum</option></select><button class="btn g" id="exp">Unduh Excel</button></div>
+  <div class="wrap" style="margin-top:10px"><table><thead><tr><th>Nama</th><th>NIK</th><th>Status MCU</th><th>Tanggal MCU</th><th>Keterangan</th><th></th></tr></thead><tbody id="tb"></tbody></table></div>
+  <div class="mut" id="emp" style="margin-top:8px"></div>
+ </div>
+</section>
+</main>
+<script>
+const $=s=>document.querySelector(s);
+let tok="",rows=[],imp=[];
+try{tok=sessionStorage.getItem("ktok")||"";$("#kd").value=localStorage.getItem("kode")||""}catch(e){}
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fd=v=>v?v.split("-").reverse().join("/"):"-";
+const show=v=>{$("#vLogin").hidden=v!=="l";$("#vMain").hidden=v!=="m"};
+const say=(id,t,c)=>{const e=$("#"+id);e.textContent=t;e.className="msg "+(c||"")};
+async function api(p,opt={}){
+ let r;try{r=await fetch("/api/kl/"+p,{...opt,headers:{"Content-Type":"application/json",Authorization:"Bearer "+tok}})}catch(e){throw new Error("Tidak ada koneksi. Coba lagi.")}
+ let j={};try{j=await r.json()}catch(e){}
+ if(r.status===401&&p!=="login"){tok="";try{sessionStorage.removeItem("ktok")}catch(e){}show("l");throw new Error(j.error||"Sesi habis.")}
+ if(!r.ok)throw new Error(j.error||"Gagal");return j}
+const ymd=(y,m,d)=>{const t=new Date(y,m-1,d);return t.getMonth()===m-1&&t.getDate()===d?`${y}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")}`:""};
+function pd(v){
+ if(v instanceof Date){const t=new Date(+v+12*36e5);return ymd(t.getUTCFullYear(),t.getUTCMonth()+1,t.getUTCDate())}
+ v=String(v||"").trim();let m;
+ if(m=v.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/)){let y=+m[3];if(y<100)y+=2000;return ymd(y,+m[2],+m[1])}
+ if(m=v.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/))return ymd(+m[1],+m[2],+m[3]);return""}
+const stOf=s=>/^sudah/i.test(s)?"Sudah":/^belum/i.test(s)?"Belum":"";
+
+$("#lg").onclick=async()=>{
+ $("#lg").disabled=true;say("le","");
+ try{const j=await api("login",{method:"POST",body:JSON.stringify({kode:$("#kd").value,sandi:$("#ps").value})});
+  tok=j.token;try{sessionStorage.setItem("ktok",tok);localStorage.setItem("kode",$("#kd").value)}catch(e){}
+  $("#ps").value="";$("#nm").textContent=j.nama;await load()}
+ catch(e){say("le",e.message,"bad2")}
+ $("#lg").disabled=false};
+$("#ps").onkeydown=e=>{if(e.key==="Enter")$("#lg").click()};
+$("#out").onclick=()=>{tok="";try{sessionStorage.removeItem("ktok")}catch(e){}show("l")};
+
+async function load(){
+ const j=await api("data");$("#nm").textContent=j.nama;rows=j.rows.sort((a,b)=>String(a.nama).localeCompare(String(b.nama)));show("m");draw()}
+function draw(){
+ const q=$("#q").value.toLowerCase(),f=$("#flt").value;
+ const L=rows.filter(r=>(!f||r.status===f)&&(r.nama+" "+r.nik).toLowerCase().includes(q));
+ $("#sT").textContent=rows.length;$("#sS").textContent=rows.filter(r=>r.status==="Sudah").length;$("#sB").textContent=rows.filter(r=>r.status==="Belum").length;
+ $("#tb").innerHTML=L.slice(0,500).map(r=>`<tr><td>${esc(r.nama)}</td><td>${esc(r.nik)}</td><td><span class="pill ${r.status==="Sudah"?"s":"b"}">${esc(r.status)} MCU</span></td><td>${esc(fd(r.tanggal))}</td><td>${esc(r.keterangan)}</td><td style="white-space:nowrap"><a data-e="${esc(r.nik)}">Ubah</a><a data-h="${esc(r.nik)}" style="color:var(--err)">Hapus</a></td></tr>`).join("");
+ $("#emp").textContent=rows.length?(L.length>500?"Menampilkan 500 pertama. Persempit pencarian.":""):"Belum ada data. Tambahkan karyawan atau upload file."}
+$("#q").oninput=draw;$("#flt").onchange=draw;
+$("#fn").oninput=e=>{e.target.value=e.target.value.replace(/\D/g,"")};
+
+function resetForm(){$("#ft").textContent="Tambah karyawan";["fn","fm","fs","fd","fk"].forEach(i=>$("#"+i).value="");$("#fn").readOnly=false;$("#fcancel").hidden=true}
+$("#fcancel").onclick=()=>{resetForm();say("fe","")};
+$("#tb").onclick=async e=>{
+ const ed=e.target.closest("a[data-e]"),dl=e.target.closest("a[data-h]");
+ if(ed){const r=rows.find(x=>x.nik===ed.dataset.e);if(!r)return;
+  $("#ft").textContent="Ubah data karyawan";$("#fn").value=r.nik;$("#fn").readOnly=true;$("#fm").value=r.nama;$("#fs").value=r.status;$("#fd").value=r.tanggal||"";$("#fk").value=r.keterangan||"";$("#fcancel").hidden=false;say("fe","");$("#fc").scrollIntoView({behavior:"smooth"})}
+ if(dl){const r=rows.find(x=>x.nik===dl.dataset.h);if(!r||!confirm(`Hapus ${r.nama} dari daftar?`))return;
+  try{await api("hapus",{method:"POST",body:JSON.stringify({niks:[r.nik]})});await load()}catch(x){alert(x.message)}}};
+$("#fsave").onclick=async()=>{
+ const r={nik:$("#fn").value,nama:$("#fm").value.trim(),status:$("#fs").value,tanggal:$("#fd").value,keterangan:$("#fk").value.trim()};
+ if(!/^\d{16}$/.test(r.nik))return say("fe","NIK harus 16 digit.","bad2");
+ if(!r.nama)return say("fe","Nama wajib diisi.","bad2");
+ if(!r.status)return say("fe","Pilih status MCU.","bad2");
+ if(r.status==="Sudah"&&!r.tanggal)return say("fe","Tanggal MCU wajib diisi jika sudah MCU.","bad2");
+ $("#fsave").disabled=true;
+ try{const j=await api("simpan",{method:"POST",body:JSON.stringify({rows:[r]})});
+  if(j.ditolak&&j.ditolak.length)throw new Error(j.ditolak[0].alasan);
+  resetForm();say("fe","Tersimpan.","ok2");await load()}catch(e){say("fe",e.message,"bad2")}
+ $("#fsave").disabled=false};
+
+const NORM={nik:"nik",nama:"nama",namalengkap:"nama",statusmcu:"status",status:"status",tanggalmcu:"tanggal",tanggal:"tanggal",tglmcu:"tanggal",keterangan:"keterangan",catatan:"keterangan"};
+$("#file").onchange=async e=>{
+ const f=e.target.files[0];if(!f)return;const R=$("#ir");R.innerHTML='<p class="mut">Membaca file…</p>';
+ try{
+  const wb=XLSX.read(await f.arrayBuffer(),{type:"array",cellDates:true,raw:true});
+  const raw=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:"",raw:true});
+  if(!raw.length)throw new Error("File tidak berisi data.");
+  const km={};Object.keys(raw[0]).forEach(k=>{const n=NORM[String(k).toLowerCase().replace(/[^a-z]/g,"")];if(n)km[k]=n});
+  if(!Object.values(km).includes("nik")||!Object.values(km).includes("status"))throw new Error("Kolom NIK dan Status MCU tidak ditemukan. Gunakan template.");
+  const seen=new Set(),errs=[];imp=[];
+  raw.forEach((x,i)=>{
+   const r={};for(const k in km)r[km[k]]=x[k];
+   if(!Object.values(r).some(v=>String(v).trim()))return;
+   const o={nik:String(r.nik??"").replace(/\D/g,""),nama:String(r.nama??"").trim(),status:stOf(String(r.status??"")),tanggal:pd(r.tanggal),keterangan:String(r.keterangan??"").trim()};
+   const er=[];
+   if(!/^\d{16}$/.test(o.nik))er.push("NIK harus 16 digit");else if(seen.has(o.nik))er.push("NIK ganda di file");seen.add(o.nik);
+   if(!o.nama)er.push("nama kosong");
+   if(!o.status)er.push("status harus Sudah atau Belum");
+   if(r.tanggal&&!o.tanggal)er.push("tanggal tidak terbaca (pakai DD/MM/YYYY)");
+   if(o.status==="Sudah"&&!o.tanggal&&!er.length)er.push("tanggal MCU wajib jika sudah MCU");
+   er.length?errs.push({n:i+2,nama:o.nama||o.nik,er}):imp.push(o)});
+  R.innerHTML=`<div class="st" style="margin-top:10px"><div class="ok"><b>${imp.length}</b><span>siap disimpan</span></div><div class="bad"><b>${errs.length}</b><span>perlu diperbaiki</span></div><div><b>${imp.length+errs.length}</b><span>baris terbaca</span></div></div>`
+   +errs.slice(0,30).map(x=>`<div class="err">Baris ${x.n} ${esc(x.nama)}: ${esc(x.er.join(", "))}</div>`).join("")
+   +(errs.length?'<div class="mut">Baris bermasalah tidak ikut disimpan. Perbaiki lalu upload ulang, data tidak akan terganda.</div>':"")
+   +(imp.length?`<div class="row"><button class="btn" id="go">Simpan ${imp.length} data</button></div><div class="msg" id="is"></div>`:"");
+  const go=$("#go");if(go)go.onclick=saveAll;
+ }catch(x){R.innerHTML=`<div class="err">${esc(x.message||"File tidak bisa dibaca.")}</div>`}};
+async function saveAll(){
+ const b=$("#go");b.disabled=true;let ok=0,rej=[],fail=0;
+ for(let i=0;i<imp.length;i+=100){const part=imp.slice(i,i+100);
+  try{const j=await api("simpan",{method:"POST",body:JSON.stringify({rows:part})});ok+=j.saved;rej.push(...(j.ditolak||[]))}catch(e){fail+=part.length}
+  say("is",`Menyimpan ${Math.min(i+100,imp.length)} dari ${imp.length}…`)}
+ say("is",`${ok} data tersimpan.`+(rej.length?` ${rej.length} ditolak.`:"")+(fail?` ${fail} gagal, coba upload ulang.`:""),fail||rej.length?"bad2":"ok2");
+ b.disabled=false;$("#file").value="";try{await load()}catch(e){}}
+
+$("#tpl").onclick=()=>{
+ const ws=XLSX.utils.aoa_to_sheet([["NIK","Nama","Status MCU","Tanggal MCU","Keterangan"],["3204011508950001","Budi Santoso","Sudah","15/10/2026","Fit"],["3204011508950002","Sari Dewi","Belum","","Dijadwalkan bulan depan"]]);
+ ws["!cols"]=[{wch:20},{wch:26},{wch:14},{wch:16},{wch:30}];
+ for(let r=2;r<=3;r++)["A","D"].forEach(c=>{const x=ws[c+r];if(x){x.t="s";x.z="@"}});
+ const w=XLSX.utils.book_new();XLSX.utils.book_append_sheet(w,ws,"Data MCU");XLSX.writeFile(w,"template-data-mcu.xlsx")};
+$("#exp").onclick=()=>{
+ if(!rows.length)return alert("Belum ada data.");
+ const d=rows.map(r=>({NIK:r.nik,Nama:r.nama,"Status MCU":r.status,"Tanggal MCU":fd(r.tanggal)==="-"?"":fd(r.tanggal),Keterangan:r.keterangan||""}));
+ const w=XLSX.utils.book_new();XLSX.utils.book_append_sheet(w,XLSX.utils.json_to_sheet(d),"Data MCU");XLSX.writeFile(w,"data-mcu-"+new Date().toISOString().slice(0,10)+".xlsx")};
+tok?load().catch(()=>show("l")):show("l");
+</script>
+</body>
+</html>
