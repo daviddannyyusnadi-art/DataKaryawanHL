@@ -30,6 +30,7 @@ export default async (req) => {
   const route = new URL(req.url).pathname.replace(/^\/api\//, "").replace(/\/$/, "");
   const kar = getStore({ name: "karyawan", consistency: "strong" });
   const ber = getStore({ name: "berkas", consistency: "strong" });
+  const abs = getStore({ name: "absensi", consistency: "strong" });
   try {
     if (route === "register" && req.method === "POST") {
       const b = await req.json();
@@ -63,6 +64,23 @@ export default async (req) => {
       await new Promise(r => setTimeout(r, 900));
       return J({ error: "kata sandi salah" }, 401);
     }
+    if (route === "absen" && req.method === "POST") {
+      const b = await req.json();
+      if (!isNik(b.nik) || !["masuk", "pulang"].includes(b.aksi)) return J({ error: "Data tidak valid" }, 400);
+      const emp = await kar.get(b.nik, { type: "json" });
+      if (!emp) { await new Promise(r => setTimeout(r, 500)); return J({ error: "NIK tidak terdaftar. Hubungi HRD." }, 404); }
+      const w = new Date(Date.now() + 7 * 36e5).toISOString(), tanggal = w.slice(0, 10), jam = w.slice(11, 16);
+      const key = `${tanggal}/${b.nik}`;
+      const rec = (await abs.get(key, { type: "json" })) || { nik: b.nik, nama: emp[NAMA], tanggal };
+      const lok = Number.isFinite(+b.lat) && Number.isFinite(+b.lng) && Math.abs(+b.lat) <= 90 && Math.abs(+b.lng) <= 180 && b.lat !== null && b.lat !== "" ? `${(+b.lat).toFixed(5)},${(+b.lng).toFixed(5)}` : "";
+      const nama = String(emp[NAMA]).split(" ")[0];
+      if (b.aksi === "masuk") {
+        if (rec.masuk) return J({ ok: true, sudah: true, nama, jam: rec.masuk, aksi: "masuk" });
+        rec.masuk = jam; rec.lokMasuk = lok;
+      } else { rec.pulang = jam; rec.lokPulang = lok; }
+      await abs.setJSON(key, rec);
+      return J({ ok: true, nama, jam, aksi: b.aksi, tanggal });
+    }
     if (!authed(req)) return J({ error: "unauthorized" }, 401);
     if (route === "karyawan" && req.method === "GET") {
       const { blobs } = await kar.list();
@@ -80,6 +98,24 @@ export default async (req) => {
         await kar.setJSON(r[NIK], { ...old, ...row, diperbarui: new Date().toISOString() });
       });
       return J({ ok: true, saved: good.length });
+    }
+    if (route === "absensi" && req.method === "GET") {
+      const bulan = new URL(req.url).searchParams.get("bulan") || "";
+      if (!/^\d{4}-\d{2}$/.test(bulan)) return J({ error: "bulan tidak valid" }, 400);
+      const { blobs } = await abs.list({ prefix: bulan + "-" });
+      const rows = await inChunks(blobs, 40, x => abs.get(x.key, { type: "json" }));
+      return J(rows.filter(Boolean));
+    }
+    if (route === "hapus" && req.method === "POST") {
+      const { niks } = await req.json();
+      if (!Array.isArray(niks) || niks.length > 50) return J({ error: "maks 50 per permintaan" }, 400);
+      const ids = niks.filter(isNik);
+      await inChunks(ids, 10, async n => {
+        await kar.delete(n);
+        const { blobs } = await ber.list({ prefix: n + "/" });
+        await Promise.all(blobs.map(x => ber.delete(x.key)));
+      });
+      return J({ ok: true, deleted: ids.length });
     }
     if (route === "berkas" && req.method === "GET") {
       const u = new URL(req.url), nik = u.searchParams.get("nik"), key = u.searchParams.get("key");
