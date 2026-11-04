@@ -8,53 +8,124 @@
 <style>
 :root{--bg:#f3f6f8;--card:#fff;--ink:#14212b;--mut:#5d6b77;--line:#d3dce3;--pri:#0f5c7a;--pri-ink:#fff;--err:#b3261e;--ok:#1b7a4b;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 @media(prefers-color-scheme:dark){:root{--bg:#0f171d;--card:#18232b;--ink:#e8eef2;--mut:#93a3af;--line:#2b3a45;--pri:#4fb3d9;--pri-ink:#06222e;--err:#ff8a80;--ok:#6fd49c}}
-*{box-sizing:border-box}
+*{box-sizing:border-box}[hidden]{display:none!important}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 main{max-width:480px;margin:0 auto;padding:20px 16px}
-h1{font-size:22px;margin:0 0 2px}.sub,.hint{color:var(--mut);font-size:13px}
+h1{font-size:22px;margin:0 0 2px}h2{font-size:18px;margin:0 0 4px}.sub,.hint{color:var(--mut);font-size:13px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin:16px 0 10px}
-label{display:block;font-weight:600;font-size:14px;margin-bottom:6px}
-input{width:100%;font:inherit;font-size:18px;letter-spacing:1px;color:var(--ink);background:var(--bg);border:1.5px solid var(--line);border-radius:10px;padding:13px;min-height:52px}
+label{display:block;font-weight:600;font-size:14px;margin:12px 0 6px}
+input{width:100%;font:inherit;font-size:18px;color:var(--ink);background:var(--bg);border:1.5px solid var(--line);border-radius:10px;padding:13px;min-height:52px}
 input:focus,button:focus-visible{outline:3px solid color-mix(in srgb,var(--pri) 45%,transparent)}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
-.btn{font:inherit;font-weight:700;border:0;border-radius:12px;min-height:56px;background:var(--pri);color:var(--pri-ink);cursor:pointer}
-.btn.out{background:none;border:2px solid var(--pri);color:var(--pri)}
-.btn:disabled{opacity:.5}
+.btn{font:inherit;font-weight:700;border:0;border-radius:12px;min-height:54px;background:var(--pri);color:var(--pri-ink);cursor:pointer;width:100%;margin-top:14px}
+.two .btn{margin-top:0}.btn.out{background:none;border:2px solid var(--pri);color:var(--pri)}
+.btn:disabled{opacity:.45;cursor:default}
+.lnk{background:none;border:0;color:var(--pri);font:inherit;text-decoration:underline;cursor:pointer;padding:8px 0}
 .msg{margin-top:14px;font-weight:600}.msg.ok{color:var(--ok)}.msg.bad{color:var(--err)}
+.stat{display:flex;justify-content:space-between;background:var(--bg);border-radius:10px;padding:12px;margin-top:10px;font-weight:600}
+#prev img{width:100%;max-height:340px;object-fit:cover;border-radius:12px;display:block;margin-top:12px}
 </style>
 </head>
 <body>
 <main>
  <h1>Absensi karyawan</h1><div class="sub" id="clk"></div>
- <div class="card">
+
+ <section class="card" id="vLogin">
+  <h2>Masuk</h2>
   <label for="nik">Nomor NIK (16 digit)</label>
-  <input id="nik" inputmode="numeric" maxlength="16" autocomplete="off" placeholder="3204…">
-  <div class="two"><button class="btn" id="bm" type="button">Absen masuk</button><button class="btn out" id="bp" type="button">Absen pulang</button></div>
-  <div id="res" role="status"></div>
- </div>
- <p class="hint">Waktu dicatat otomatis oleh server (WIB). Lokasi HP dicatat jika Anda mengizinkan.</p>
+  <input id="nik" inputmode="numeric" maxlength="16" autocomplete="username" placeholder="3204…">
+  <label for="sandi">PIN (6 angka)</label>
+  <input id="sandi" type="password" inputmode="numeric" maxlength="8" autocomplete="current-password">
+  <div class="hint" style="margin-top:6px">Pertama kali masuk? Isi PIN dengan tanggal lahir Anda format DDMMYYYY (contoh 15081995), lalu buat PIN baru.</div>
+  <button class="btn" id="bl" type="button">Masuk</button>
+  <div class="msg" id="e1" role="alert"></div>
+ </section>
+
+ <section class="card" id="vPin" hidden>
+  <h2>Buat PIN baru</h2><div class="sub">PIN dipakai untuk masuk berikutnya. Jangan dibagikan ke siapa pun.</div>
+  <label for="p1">PIN baru (6 angka)</label><input id="p1" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password">
+  <label for="p2">Ulangi PIN</label><input id="p2" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password">
+  <button class="btn" id="bp1" type="button">Simpan PIN</button>
+  <div class="msg" id="e2" role="alert"></div>
+ </section>
+
+ <section id="vMain" hidden>
+  <div class="card">
+   <h2 id="hi"></h2>
+   <div class="stat"><span>Masuk</span><span id="sm">-</span></div>
+   <div class="stat"><span>Pulang</span><span id="sp">-</span></div>
+   <div class="two"><button class="btn" id="bm" type="button">Absen masuk</button><button class="btn out" id="bk" type="button">Absen pulang</button></div>
+   <div class="hint" style="margin-top:8px">Tekan tombol, ambil foto selfie wajah Anda, lalu kirim.</div>
+   <div id="prev" hidden>
+    <img id="pimg" alt="Pratinjau selfie">
+    <div class="two" style="margin-top:12px"><button class="btn out" id="ulang" type="button">Ulangi foto</button><button class="btn" id="kirim" type="button">Kirim</button></div>
+   </div>
+   <div class="msg" id="e3" role="status"></div>
+  </div>
+  <button class="lnk" id="out" type="button">Keluar</button>
+ </section>
+ <input type="file" id="cam" accept="image/*" capture="user" hidden>
 </main>
 <script>
 const $=s=>document.querySelector(s);
-try{$("#nik").value=localStorage.getItem("nik")||""}catch(e){}
+let tok="",aksi="",foto="";
+try{tok=sessionStorage.getItem("etok")||"";$("#nik").value=localStorage.getItem("nik")||""}catch(e){}
 const tick=()=>{$("#clk").textContent=new Date().toLocaleString("id-ID",{timeZone:"Asia/Jakarta",weekday:"long",day:"numeric",month:"long",year:"numeric",hour:"2-digit",minute:"2-digit"})+" WIB"};tick();setInterval(tick,20000);
-$("#nik").oninput=e=>{e.target.value=e.target.value.replace(/\D/g,"")};
+const show=v=>["vLogin","vPin","vMain"].forEach(x=>$("#"+x).hidden=x!==v);
+const msg=(id,t,c)=>{const m=$("#"+id);m.textContent=t;m.className="msg "+(c||"")};
+const num=e=>{e.target.value=e.target.value.replace(/\D/g,"")};["#nik","#sandi","#p1","#p2"].forEach(s=>$(s).oninput=num);
+async function api(p,opt={}){
+ let r;try{r=await fetch("/api/emp/"+p,{...opt,headers:{"Content-Type":"application/json",Authorization:"Bearer "+tok}})}catch(e){throw new Error("Tidak ada koneksi. Coba lagi.")}
+ let j={};try{j=await r.json()}catch(e){}
+ if(r.status===401&&p!=="login"){tok="";try{sessionStorage.removeItem("etok")}catch(e){}show("vLogin");throw new Error(j.error||"Sesi habis.")}
+ if(!r.ok)throw new Error(j.error||"Gagal");return j}
 const pos=()=>new Promise(r=>{if(!navigator.geolocation)return r(null);navigator.geolocation.getCurrentPosition(p=>r({lat:p.coords.latitude,lng:p.coords.longitude}),()=>r(null),{timeout:6000,maximumAge:60000})});
-async function go(aksi){
- const nik=$("#nik").value,R=$("#res");
- if(!/^\d{16}$/.test(nik)){R.className="msg bad";R.textContent="NIK harus 16 digit.";return}
- const bs=document.querySelectorAll("button");bs.forEach(b=>b.disabled=true);R.className="msg";R.textContent="Mencatat…";
- try{
-  const l=await pos();
-  const r=await fetch("/api/absen",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({nik,aksi,...(l||{})})});
-  const j=await r.json();if(!r.ok)throw new Error(j.error||"Gagal mencatat");
-  try{localStorage.setItem("nik",nik)}catch(e){}
-  R.className="msg ok";
-  R.textContent=j.sudah?`${j.nama}, absen masuk Anda sudah tercatat pukul ${j.jam} WIB.`:`${j.nama}, absen ${aksi} tercatat pukul ${j.jam} WIB.`;
- }catch(e){R.className="msg bad";R.textContent=e.message==="Failed to fetch"?"Tidak ada koneksi. Coba lagi.":e.message}
- bs.forEach(b=>b.disabled=false);
-}
-$("#bm").onclick=()=>go("masuk");$("#bp").onclick=()=>go("pulang");
+
+$("#bl").onclick=async()=>{
+ const nik=$("#nik").value,sandi=$("#sandi").value;
+ if(!/^\d{16}$/.test(nik))return msg("e1","NIK harus 16 digit.","bad");
+ if(!sandi)return msg("e1","Isi PIN atau tanggal lahir Anda.","bad");
+ $("#bl").disabled=true;msg("e1","Memeriksa…");
+ try{const j=await api("login",{method:"POST",body:JSON.stringify({nik,sandi})});
+  tok=j.token;try{sessionStorage.setItem("etok",tok);localStorage.setItem("nik",nik)}catch(e){}
+  $("#sandi").value="";msg("e1","");j.baru?show("vPin"):await main()
+ }catch(e){msg("e1",e.message,"bad")}
+ $("#bl").disabled=false};
+$("#sandi").onkeydown=e=>{if(e.key==="Enter")$("#bl").click()};
+
+$("#bp1").onclick=async()=>{
+ const a=$("#p1").value,b=$("#p2").value;
+ if(!/^\d{6}$/.test(a))return msg("e2","PIN harus 6 angka.","bad");
+ if(a!==b)return msg("e2","Kedua PIN belum sama.","bad");
+ $("#bp1").disabled=true;
+ try{await api("pin",{method:"POST",body:JSON.stringify({pin:a})});$("#p1").value=$("#p2").value="";msg("e2","");await main()}catch(e){msg("e2",e.message,"bad")}
+ $("#bp1").disabled=false};
+
+async function main(){
+ try{const s=await api("status");if(s.perluPin)return show("vPin");
+  show("vMain");$("#hi").textContent="Halo, "+s.nama;$("#sm").textContent=s.masuk||"-";$("#sp").textContent=s.pulang||"-";
+  $("#bm").disabled=!!s.masuk;$("#bk").disabled=!s.masuk;$("#ulang").disabled=$("#kirim").disabled=false;resetPrev()}
+ catch(e){msg("e1",e.message,"bad")}}
+function resetPrev(){foto="";$("#prev").hidden=true;$("#cam").value=""}
+const pick=a=>{aksi=a;msg("e3","");$("#cam").value="";$("#cam").click()};
+$("#bm").onclick=()=>pick("masuk");$("#bk").onclick=()=>pick("pulang");$("#ulang").onclick=()=>pick(aksi);
+
+$("#cam").onchange=e=>{
+ const f=e.target.files[0];if(!f)return;
+ const rd=new FileReader();rd.onload=()=>{const im=new Image();im.onload=()=>{
+  const sc=Math.min(1,720/Math.max(im.width,im.height)),c=document.createElement("canvas");c.width=im.width*sc;c.height=im.height*sc;
+  c.getContext("2d").drawImage(im,0,0,c.width,c.height);foto=c.toDataURL("image/jpeg",.72);
+  $("#pimg").src=foto;$("#prev").hidden=false};im.onerror=()=>msg("e3","Foto tidak bisa dibaca. Coba lagi.","bad");im.src=rd.result};rd.readAsDataURL(f)};
+
+$("#kirim").onclick=async()=>{
+ if(!foto)return;const bs=document.querySelectorAll("#vMain button");bs.forEach(b=>b.disabled=true);msg("e3","Mengirim…");
+ try{const l=await pos();
+  const j=await api("absen",{method:"POST",body:JSON.stringify({aksi,foto,...(l||{})})});
+  msg("e3",j.sudah?`Absen masuk Anda sudah tercatat pukul ${j.jam} WIB.`:`Absen ${aksi} berhasil, pukul ${j.jam} WIB.`,"ok");
+  await main();
+ }catch(e){msg("e3",e.message,"bad");bs.forEach(b=>b.disabled=false);}};
+$("#out").onclick=()=>{tok="";try{sessionStorage.removeItem("etok")}catch(e){}resetPrev();show("vLogin")};
+tok?main():show("vLogin");
 </script>
 </body>
 </html>
