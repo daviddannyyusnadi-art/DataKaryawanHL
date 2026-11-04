@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex"><title>Registrasi Karyawan</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f3f6f8;--card:#fff;--ink:#14212b;--mut:#5d6b77;--line:#d3dce3;--pri:#0f5c7a;--pri-ink:#fff;--err:#b3261e;--ok:#1b7a4b;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f171d;--card:#18232b;--ink:#e8eef2;--mut:#93a3af;--line:#2b3a45;--pri:#4fb3d9;--pri-ink:#06222e;--err:#ff8a80;--ok:#6fd49c}}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 "Plus Jakarta Sans",system-ui,sans-serif;padding-bottom:84px}
+header{position:sticky;top:env(safe-area-inset-top,0px);background:var(--card);border-bottom:1px solid var(--line);padding:12px 16px;z-index:5}
+header::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--card);z-index:10}
+h1{font-size:17px;margin:0 0 2px}
+.sub{color:var(--mut);font-size:13px}
+.bar{height:6px;background:var(--line);border-radius:3px;margin-top:10px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--pri);width:0;transition:width .3s}
+main{max-width:560px;margin:0 auto;padding:16px}
+h2{font-size:20px;margin:4px 0 14px}
+h3{font-size:15px;margin:22px 0 10px;padding-top:14px;border-top:1px solid var(--line)}
+.f{margin-bottom:14px}
+label{display:block;font-size:14px;font-weight:500;margin-bottom:5px}
+label .r{color:var(--err)}
+input,select,textarea{width:100%;font:inherit;color:var(--ink);background:var(--card);border:1.5px solid var(--line);border-radius:10px;padding:12px;min-height:48px}
+input:focus,select:focus,textarea:focus,button:focus-visible{outline:3px solid color-mix(in srgb,var(--pri) 45%,transparent);border-color:var(--pri)}
+input[readonly]{background:var(--bg);color:var(--mut)}
+.f.bad input,.f.bad select,.f.bad textarea{border-color:var(--err)}
+.msg{color:var(--err);font-size:13px;margin-top:4px;display:none}.f.bad .msg{display:block}
+.hint{color:var(--mut);font-size:12.5px;margin-top:4px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.chk{display:flex;gap:10px;align-items:center;padding:12px;background:var(--bg);border-radius:10px;margin-bottom:14px}
+.chk input{width:22px;height:22px;min-height:0}
+.chk label{margin:0}
+.up{border:1.5px dashed var(--line);border-radius:10px;padding:12px}
+.up img{max-width:100%;max-height:140px;border-radius:8px;display:block;margin-top:8px}
+.up .nm{font-size:13px;color:var(--ok);margin-top:6px;word-break:break-all}
+.pos{display:flex;gap:8px;margin-bottom:8px}
+.pos button{flex:0 0 48px;background:none;border:1.5px solid var(--line);border-radius:10px;color:var(--err);font-size:20px}
+.ghost{background:none;border:1.5px solid var(--pri);color:var(--pri);border-radius:10px;padding:10px 14px;font:inherit;font-weight:500;min-height:44px}
+nav{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));display:flex;gap:10px;z-index:5}
+nav button{flex:1;min-height:50px;border-radius:12px;font:inherit;font-weight:700;border:0;cursor:pointer}
+#back{background:var(--bg);color:var(--ink);flex:0 0 32%}
+#next{background:var(--pri);color:var(--pri-ink)}
+#next:disabled{opacity:.6}
+.sum{width:100%;border-collapse:collapse;font-size:14px}
+.sum td{padding:7px 0;border-bottom:1px solid var(--line);vertical-align:top}
+.sum td:first-child{color:var(--mut);width:42%;padding-right:8px}
+.done{text-align:center;padding:40px 8px}
+.done b{display:block;font-size:22px;margin-bottom:8px;color:var(--ok)}
+.note{background:var(--bg);border-radius:10px;padding:12px;font-size:13px;color:var(--mut);margin:14px 0}
+</style>
+</head>
+<body>
+<header><h1>Registrasi Karyawan</h1><div class="sub" id="stepLbl"></div><div class="bar"><i id="prog"></i></div></header>
+<main id="app"></main>
+<nav id="nav"><button id="back" type="button">Kembali</button><button id="next" type="button">Lanjut</button></nav>
+
+<script>
+// Isi alamat Google Apps Script / API Anda di sini agar data terkirim ke server. Kosong = data hanya bisa disalin.
+const ENDPOINT = "/api/register";
+
+const OPT = {
+ kawin:["Belum Menikah","Menikah","Cerai Hidup","Cerai Mati"],
+ jk:["Laki-laki","Perempuan"],
+ agama:["Islam","Kristen Protestan","Katolik","Hindu","Buddha","Konghucu","Lainnya"],
+ tinggal:["Milik sendiri","Milik keluarga","Kontrak / sewa","Kos","Mess / asrama perusahaan","Lainnya"],
+ didik:["SD","SMP","SMA / SMK / sederajat","D1","D2","D3","D4","S1","S2","S3"],
+ hub:["Orang tua","Suami / Istri","Anak","Saudara kandung","Kerabat","Teman","Lainnya"]
+};
+// [id, label, type, required, extra]  type: t text, e email, d date, n number-only(len), tel, s select, a textarea, r readonly
+const S = [
+ {t:"Data pribadi",f:[
+  ["email","Email Address","e",1],
+  ["nama","Nama lengkap sesuai KTP","t",1],
+  ["tmpLahir","Tempat lahir","t",1],
+  ["tglLahir","Tanggal lahir","d",1],
+  ["usia","Usia","r",0,"Terisi otomatis dari tanggal lahir"],
+  ["kawin","Status perkawinan","s",1,"kawin"],
+  ["jk","Jenis kelamin","s",1,"jk"],
+  ["agama","Agama","s",1,"agama"],
+  ["nik","Nomor Induk Kependudukan (NIK KTP)","n",1,16],
+  ["kk","Nomor Kartu Keluarga (KK)","n",1,16],
+  ["ibu","Nama lengkap ibu kandung","t",1],
+  ["ayah","Nama lengkap ayah kandung","t",1],
+  ["tinggal","Status tempat tinggal","s",1,"tinggal"]]},
+ {t:"Posisi kerja",f:[["dept","Departemen (divisi)","t",1]],pos:1},
+ {t:"Alamat",addr:1},
+ {t:"Kontak & dokumen negara",f:[
+  ["hp","Nomor handphone (WA)","tel",1],
+  ["hp2","Nomor handphone 2","tel",0],
+  ["hpDar","Nomor HP darurat (emergency contact)","tel",1],
+  ["namaDar","Nama emergency contact","t",1],
+  ["hubDar","Hubungan emergency contact","s",1,"hub"],
+  ["bpjsKes","Nomor BPJS Kesehatan","t",0],
+  ["bpjsTk","Nomor BPJS Ketenagakerjaan","t",0],
+  ["npwp","Nomor NPWP","t",0]]},
+ {t:"Pendidikan & rekening",f:[
+  ["didik","Pendidikan terakhir","s",1,"didik"],
+  ["sekolah","Nama sekolah / universitas terakhir","t",1],
+  ["jurusan","Jurusan / bidang keahlian","t",1],
+  ["lulus","Tahun kelulusan","n",1,4],
+  ["bank","Nama bank","t",1],
+  ["rek","Nomor rekening","n",1,0]]},
+ {t:"Unggah dokumen",up:[
+  ["fKtp","Foto KTP",1],["fKk","Foto Kartu Keluarga (KK)",1],["fDiri","Foto diri",1],
+  ["fTab","Foto buku tabungan",1],["fIjz","Dokumen ijazah",1],["fCv","Berkas CV",1],
+  ["fLam","Surat lamaran",0],["fSim","Foto SIM",0]]},
+ {t:"Periksa & kirim",review:1}
+];
+const ADDR=[["alamat","Alamat lengkap","a"],["rt","RT","n",3],["rw","RW","n",3],["kel","Kelurahan","t"],["kec","Kecamatan","t"],["kota","Kota / kabupaten","t"],["prov","Provinsi","t"]];
+
+let D={},files={},positions=[""],step=0,sameAddr=false,sent=false;
+const $=s=>document.querySelector(s),app=$("#app");
+try{const x=JSON.parse(localStorage.getItem("reg_draft")||"null");if(x){D=x.D||{};positions=x.positions||[""];sameAddr=!!x.sameAddr;step=Math.min(x.step||0,S.length-1)}}catch(e){}
+const save=()=>{try{localStorage.setItem("reg_draft",JSON.stringify({D,positions,sameAddr,step}))}catch(e){}};
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+function field(id,label,type,req,extra,pre=""){
+ const k=pre+id,v=D[k]??"";let inp;
+ if(type==="s")inp=`<select data-k="${k}"><option value="">Pilih…</option>${OPT[extra].map(o=>`<option${o===v?" selected":""}>${o}</option>`).join("")}</select>`;
+ else if(type==="a")inp=`<textarea rows="3" data-k="${k}">${esc(v)}</textarea>`;
+ else if(type==="r")inp=`<input readonly data-k="${k}" value="${esc(v)}">`;
+ else{const m={e:'type="email" inputmode="email" autocomplete="email"',d:'type="date"',tel:'type="tel" inputmode="tel"',n:'type="text" inputmode="numeric"',t:'type="text"'}[type];
+  inp=`<input ${m} data-k="${k}" data-ty="${type}" ${type==="n"&&extra?`maxlength="${extra}"`:""} value="${esc(v)}">`}
+ return `<div class="f" data-f="${k}" data-req="${req?1:0}"><label>${label}${req?' <span class="r">*</span>':""}</label>${inp}${type==="r"&&extra?`<div class="hint">${extra}</div>`:""}<div class="msg"></div></div>`}
+
+function addrBlock(pre,title){return `<h3>${title}</h3>`+ADDR.map(a=>field(a[0],a[1],a[2],1,a[3],pre)).join("")+(pre==="ktp_"?field("pos","Kode pos","n",1,5,"ktp_"):"")}
+
+function render(){
+ const s=S[step];let h=`<h2>${s.t}</h2>`;
+ if(s.f)h+=s.f.map(f=>field(...f)).join("");
+ if(s.pos){h+=`<h3>Posisi / jabatan</h3><div class="hint" style="margin:-4px 0 10px">Isi satu atau lebih (maksimal 7).</div><div id="posList"></div><button type="button" class="ghost" id="addPos">+ Tambah posisi</button>`}
+ if(s.addr){h+=addrBlock("ktp_","Sesuai KTP")+`<div class="chk"><input type="checkbox" id="same"${sameAddr?" checked":""}><label for="same">Alamat domisili sama dengan KTP</label></div><div id="dom">${sameAddr?"":addrBlock("dom_","Alamat tempat tinggal (domisili)")}</div>`}
+ if(s.up){h+=`<div class="hint" style="margin-bottom:12px">Foto atau PDF. Foto otomatis dikecilkan agar hemat kuota.</div>`+s.up.map(u=>`<div class="f" data-f="${u[0]}" data-req="${u[2]}"><label>${u[1]}${u[2]?' <span class="r">*</span>':' <span class="hint">(opsional)</span>'}</label><div class="up"><input type="file" accept="image/*,.pdf" data-file="${u[0]}"><div class="pv"></div></div><div class="msg"></div></div>`).join("")}
+ if(s.review){h+=sent?"":`<table class="sum">${summary()}</table><div class="note">Pastikan data sudah benar. Setelah dikirim, perubahan harus lewat HRD.</div>`}
+ app.innerHTML=h;
+ if(s.pos)drawPos();
+ if(s.up)for(const k in files)showPrev(k);
+ const pct=((step+(sent?1:0))/(S.length-1))*100;
+ $("#prog").style.width=Math.min(pct,100)+"%";
+ $("#stepLbl").textContent=`Langkah ${step+1} dari ${S.length} · ${s.t}`;
+ $("#back").style.visibility=step&&!sent?"visible":"hidden";
+ $("#next").textContent=step===S.length-1?"Kirim pendaftaran":"Lanjut";
+ if(sent)$("#nav").style.display="none";
+ window.scrollTo(0,0);save();
+}
+
+function drawPos(){
+ $("#posList").innerHTML=positions.map((p,i)=>`<div class="f" data-f="p${i}" data-req="${i?0:1}"><div class="pos"><input data-pos="${i}" placeholder="Posisi / jabatan ${i+1}" value="${esc(p)}">${i?`<button type="button" data-del="${i}" aria-label="Hapus">×</button>`:""}</div><div class="msg"></div></div>`).join("");
+ $("#addPos").style.display=positions.length>=7?"none":"";
+}
+
+function showPrev(k){const f=files[k],box=document.querySelector(`[data-f="${k}"] .pv`);if(!box)return;
+ box.innerHTML=(f.type.startsWith("image")?`<img src="${f.data}" alt="">`:"")+`<div class="nm">✓ ${esc(f.name)}</div>`}
+
+function readFile(file,k){
+ const done=data=>{files[k]={name:file.name,type:file.type||"application/pdf",data};showPrev(k);clr(k)};
+ const r=new FileReader();
+ r.onload=()=>{
+  if(!file.type.startsWith("image"))return file.size>3.5e6?err(k,"Ukuran PDF maksimal 3,5 MB"):done(r.result);
+  const im=new Image();im.onload=()=>{const m=1280,sc=Math.min(1,m/Math.max(im.width,im.height)),c=document.createElement("canvas");
+   c.width=im.width*sc;c.height=im.height*sc;c.getContext("2d").drawImage(im,0,0,c.width,c.height);done(c.toDataURL("image/jpeg",.78))};im.src=r.result};
+ r.readAsDataURL(file)}
+
+const box=k=>document.querySelector(`[data-f="${k}"]`);
+function err(k,m){const b=box(k);if(!b)return;b.classList.add("bad");b.querySelector(".msg").textContent=m}
+function clr(k){const b=box(k);if(b)b.classList.remove("bad")}
+
+function calcAge(v){if(!v)return"";const b=new Date(v),n=new Date();let a=n.getFullYear()-b.getFullYear();const m=n.getMonth()-b.getMonth();if(m<0||(m===0&&n.getDate()<b.getDate()))a--;return a>=0?String(a):""}
+
+app.addEventListener("input",e=>{
+ const t=e.target;
+ if(t.dataset.pos!==undefined){positions[+t.dataset.pos]=t.value;clr("p"+t.dataset.pos);return save()}
+ if(t.dataset.k){let v=t.value;if(t.dataset.ty==="n"){v=v.replace(/\D/g,"");t.value=v}
+  D[t.dataset.k]=v;clr(t.dataset.k);
+  if(t.dataset.k==="tglLahir"){D.usia=calcAge(v);const u=document.querySelector('[data-k="usia"]');if(u)u.value=D.usia}
+  save()}
+});
+app.addEventListener("change",e=>{
+ const t=e.target;
+ if(t.dataset.k)D[t.dataset.k]=t.value,clr(t.dataset.k),save();
+ if(t.dataset.file&&t.files[0])readFile(t.files[0],t.dataset.file);
+ if(t.id==="same"){sameAddr=t.checked;$("#dom").innerHTML=sameAddr?"":addrBlock("dom_","Alamat tempat tinggal (domisili)");save()}
+});
+app.addEventListener("click",e=>{
+ const t=e.target;
+ if(t.id==="addPos"&&positions.length<7){positions.push("");drawPos();save()}
+ if(t.dataset.del){positions.splice(+t.dataset.del,1);drawPos();save()}
+ if(t.id==="copy")navigator.clipboard.writeText(JSON.stringify(payload(false),null,2)).then(()=>t.textContent="Tersalin ✓").catch(()=>t.textContent="Gagal menyalin");
+});
+
+function validate(){
+ const s=S[step];let ok=true,first=null;
+ const bad=(k,m)=>{err(k,m);ok=false;first=first||box(k)};
+ const chk=(k,label,type,req,extra)=>{
+  const v=(D[k]||"").trim();
+  if(req&&!v)return bad(k,"Wajib diisi");
+  if(!v)return;
+  if(type==="e"&&!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v))bad(k,"Format email belum benar");
+  if(type==="tel"&&!/^(\+62|62|0)8\d{7,12}$/.test(v.replace(/[\s-]/g,"")))bad(k,"Nomor HP tidak valid, contoh 081234567890");
+  if(type==="n"&&extra&&v.length!==extra&&k.slice(-3)!=="_rt"&&!/rt|rw/.test(k))bad(k,`Harus ${extra} digit`);
+  if(k==="lulus"&&(+v<1960||+v>new Date().getFullYear()))bad(k,"Tahun tidak valid");
+  if(k==="tglLahir"&&+calcAge(v)<17)bad(k,"Usia minimal 17 tahun");
+ };
+ (s.f||[]).forEach(f=>chk(f[0],f[1],f[2],f[3],f[4]));
+ if(s.pos&&!positions[0].trim())bad("p0","Isi minimal satu posisi");
+ if(s.addr){const ps=sameAddr?["ktp_"]:["ktp_","dom_"];ps.forEach(p=>{ADDR.forEach(a=>chk(p+a[0],a[1],a[2],1,0));});chk("ktp_pos","Kode pos","n",1,5)}
+ if(s.up)s.up.forEach(u=>{if(u[2]&&!files[u[0]])bad(u[0],"Dokumen ini wajib diunggah")});
+ if(first)first.scrollIntoView({behavior:"smooth",block:"center"});
+ return ok;
+}
+
+function payload(withFiles){
+ const o={...D};if(sameAddr)ADDR.forEach(a=>o["dom_"+a[0]]=D["ktp_"+a[0]]);
+ o.posisi=positions.map(p=>p.trim()).filter(Boolean);
+ o.dikirim=new Date().toISOString();
+ if(withFiles){o.berkas=files}else{o.berkas=Object.keys(files).map(k=>k+": "+files[k].name)}
+ return o}
+
+function summary(){
+ const p=payload(false),rows=[];
+ S.forEach(s=>(s.f||[]).forEach(f=>{if(p[f[0]])rows.push([f[1],p[f[0]]])}));
+ rows.push(["Posisi",p.posisi.join(", ")]);
+ rows.push(["Alamat KTP",[p.ktp_alamat,"RT "+p.ktp_rt+"/RW "+p.ktp_rw,p.ktp_kel,p.ktp_kec,p.ktp_kota,p.ktp_prov,p.ktp_pos].join(", ")]);
+ rows.push(["Alamat domisili",[p.dom_alamat,"RT "+p.dom_rt+"/RW "+p.dom_rw,p.dom_kel,p.dom_kec,p.dom_kota,p.dom_prov].join(", ")]);
+ rows.push(["Dokumen",p.berkas.length+" berkas diunggah"]);
+ return rows.map(r=>`<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td></tr>`).join("")}
+
+$("#back").onclick=()=>{if(step>0){step--;render()}};
+$("#next").onclick=async()=>{
+ if(!validate())return;
+ if(step<S.length-1){step++;return render()}
+ const b=$("#next");b.disabled=true;b.textContent="Mengirim…";
+ try{
+  const H={"Content-Type":"application/json"},ks=Object.keys(files);let i=0;
+  for(const k of ks){b.textContent=`Mengunggah berkas ${++i}/${ks.length}…`;const x=files[k];
+   const r=await fetch("/api/upload",{method:"POST",headers:H,body:JSON.stringify({nik:D.nik,key:k,name:x.name,type:x.type,data:x.data})});
+   if(r.status===409)throw new Error("dup");if(!r.ok)throw 0}
+  b.textContent="Menyimpan data…";
+  const r2=await fetch("/api/register",{method:"POST",headers:H,body:JSON.stringify(payload(false))});
+  if(r2.status===409)throw new Error("dup");if(!r2.ok)throw 0
+  sent=true;try{localStorage.removeItem("reg_draft")}catch(e){}
+  $("#nav").style.display="none";$("#prog").style.width="100%";
+  app.innerHTML=`<div class="done"><b>Pendaftaran selesai</b><p>Terima kasih, ${esc(D.nama)}. Data Anda sudah dicatat.</p>${ENDPOINT?"":'<div class="note">Mode demo: belum ada server penerima. Salin data di bawah dan kirim ke HRD.</div><button class="ghost" id="copy" type="button">Salin data</button>'}</div>`;
+ }catch(e){b.disabled=false;b.textContent="Kirim pendaftaran";alert(e&&e.message==="dup"?"NIK ini sudah terdaftar. Hubungi HRD jika data perlu diubah.":"Gagal mengirim. Periksa koneksi lalu coba lagi.")}
+};
+render();
+</script>
+</body>
+</html>
