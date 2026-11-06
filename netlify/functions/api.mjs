@@ -18,6 +18,16 @@ const NIK = "NIK (KTP)", NAMA = "Nama Lengkap Sesuai KTP";
 const M = {email:"Email Address",nama:NAMA,tmpLahir:"Tempat Lahir",tglLahir:"Tanggal Lahir",kawin:"Status Perkawinan",jk:"Jenis Kelamin",agama:"Agama",dept:"Departemen (Divisi)",dom_alamat:"Alamat Domisili",dom_rt:"RT (Domisili)",dom_rw:"RW (Domisili)",dom_kel:"Kelurahan (Domisili)",dom_kec:"Kecamatan (Domisili)",dom_kota:"Kota (Domisili)",dom_prov:"Provinsi (Domisili)",nik:NIK,kk:"Nomor KK",ktp_alamat:"Alamat Lengkap Sesuai KTP",ktp_rt:"RT (KTP)",ktp_rw:"RW (KTP)",ktp_kel:"Kelurahan (KTP)",ktp_kec:"Kecamatan (KTP)",ktp_kota:"Kota (KTP)",ktp_prov:"Provinsi (KTP)",ktp_pos:"Kode Pos",hp:"Nomor HP (WA)",hp2:"Nomor HP 2",hpDar:"Nomor HP Darurat",namaDar:"Nama Kontak Darurat",hubDar:"Hubungan Kontak Darurat",ibu:"Nama Ibu Kandung",ayah:"Nama Ayah Kandung",tinggal:"Status Tempat Tinggal",bpjsKes:"Nomor BPJS Kesehatan",bpjsTk:"Nomor BPJS Ketenagakerjaan",didik:"Pendidikan Terakhir",sekolah:"Nama Sekolah/Universitas",jurusan:"Jurusan / Bidang Keahlian",lulus:"Tahun Kelulusan",npwp:"Nomor NPWP",rek:"Nomor Rekening",bank:"Nama Bank"};
 const clean = v => String(v ?? "").trim().slice(0, 500);
 const isNik = v => /^\d{16}$/.test(String(v || ""));
+const DEPT = ["Production", "ME", "Logistic", "HR", "Warehouse"];
+const LEN = ["Departemen (Divisi)", "Posisi / Jabatan", "Alamat Domisili", "RT (Domisili)", "RW (Domisili)", "Kelurahan (Domisili)", "Kecamatan (Domisili)", "Kota (Domisili)", "Provinsi (Domisili)", "Kode Pos", "Nomor KK", "Nama Ibu Kandung", "Nama Ayah Kandung", "Status Tempat Tinggal", "Nomor HP (WA)", "Nomor HP Darurat", "Nama Kontak Darurat", "Hubungan Kontak Darurat", "Pendidikan Terakhir", "Nama Sekolah/Universitas", "Jurusan / Bidang Keahlian", "Tahun Kelulusan", "Nama Bank", "Nomor Rekening"];
+const EDIT = [...LEN, "Nomor HP 2", "Nomor BPJS Kesehatan", "Nomor BPJS Ketenagakerjaan", "Nomor NPWP"];
+const DOCS = ["fKk", "fDiri", "fTab"];
+const kelengkapan = r => {
+  const kurang = LEN.filter(k => !(k === "Posisi / Jabatan" ? (r[k] || r["Posisi / Jabatan 1"]) : r[k]));
+  DOCS.forEach(d => { if (!(r.berkas || []).includes(d)) kurang.push(d); });
+  const total = LEN.length + DOCS.length;
+  return { persen: Math.round((total - kurang.length) / total * 100), kurang };
+};
 const toBuf = b => b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength);
 
 const wib = () => { const w = new Date(Date.now() + 7 * 36e5).toISOString(); return { tanggal: w.slice(0, 10), jam: w.slice(11, 16) }; };
@@ -70,8 +80,9 @@ export default async (req) => {
       const b = await req.json();
       const r = {};
       for (const k in M) if (b[k] != null) r[M[k]] = clean(b[k]);
-      (Array.isArray(b.posisi) ? b.posisi : []).slice(0, 7).forEach((p, i) => r[`Posisi / Jabatan ${i + 1}`] = clean(p));
-      if (!isNik(r[NIK]) || !r[NAMA]) return J({ error: "data tidak valid" }, 400);
+      if (b.posisi) r["Posisi / Jabatan"] = clean(Array.isArray(b.posisi) ? b.posisi[0] : b.posisi);
+      if (!isNik(r[NIK]) || !r[NAMA] || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(r["Email Address"] || "")) return J({ error: "data tidak valid" }, 400);
+      for (const k of ["fKtp", "fIjz"]) if (!(await ber.getMetadata(`${r[NIK]}/${k}`))) return J({ error: "Foto KTP dan ijazah wajib diunggah" }, 400);
       if (await kar.get(r[NIK])) return J({ error: "NIK sudah terdaftar" }, 409);
       const lahir = new Date(r["Tanggal Lahir"]);
       if (!isNaN(lahir)) { const n = new Date(); let a = n.getFullYear() - lahir.getFullYear(); if (n < new Date(n.getFullYear(), lahir.getMonth(), lahir.getDate())) a--; r["Usia"] = String(a); }
@@ -131,10 +142,40 @@ export default async (req) => {
         await akun.setJSON(nik, ac);
         return J({ ok: true });
       }
+      if (route === "emp/profil" && req.method === "GET") return J({ nama: emp[NAMA], data: Object.fromEntries(EDIT.map(k => [k, emp[k] ?? (k === "Posisi / Jabatan" ? emp["Posisi / Jabatan 1"] ?? "" : "")])), berkas: emp.berkas || [], ...kelengkapan(emp) });
+      if (route === "emp/profil" && req.method === "POST") {
+        const { data } = await req.json(), up = {};
+        for (const k of EDIT) {
+          if (!data || data[k] == null) continue;
+          const v = clean(data[k]);
+          const bad = !v ? "" : (k === "Departemen (Divisi)" && !(DEPT.includes(v) || /^Lainnya(: .+)?$/.test(v))) ? "pilih dari daftar"
+            : (k === "Posisi / Jabatan" && !(v === "Daily Worker" || /^Lainnya(: .+)?$/.test(v))) ? "pilih dari daftar"
+            : (k === "Nomor KK" && !/^\d{16}$/.test(v)) ? "harus 16 digit"
+            : (k === "Kode Pos" && !/^\d{5}$/.test(v)) ? "harus 5 digit"
+            : (k === "Tahun Kelulusan" && !/^\d{4}$/.test(v)) ? "harus 4 digit"
+            : (k.startsWith("Nomor HP") && !/^(\+62|62|0)8\d{7,12}$/.test(v.replace(/[\s-]/g, ""))) ? "tidak valid, contoh 081234567890" : "";
+          if (bad) return J({ error: `${k}: ${bad}` }, 400);
+          up[k] = v;
+        }
+        const nu = { ...emp, ...up, diperbarui: new Date().toISOString() };
+        await kar.setJSON(nik, nu);
+        return J({ ok: true, ...kelengkapan(nu) });
+      }
+      if (route === "emp/berkas" && req.method === "POST") {
+        const b = await req.json();
+        const m = String(b.data || "").match(/^data:([\w\/+.-]+);base64,(.+)$/s);
+        if (!KEYS.includes(b.key) || !m || !(m[1].startsWith("image/") || m[1] === "application/pdf")) return J({ error: "berkas tidak valid" }, 400);
+        const buf = Buffer.from(m[2], "base64");
+        if (buf.length > 3.6e6) return J({ error: "Ukuran berkas terlalu besar" }, 413);
+        await ber.set(`${nik}/${b.key}`, toBuf(buf), { metadata: { type: m[1], name: clean(b.name) } });
+        const nu = { ...emp, berkas: [...new Set([...(emp.berkas || []), b.key])], diperbarui: new Date().toISOString() };
+        await kar.setJSON(nik, nu);
+        return J({ ok: true, ...kelengkapan(nu) });
+      }
       const { tanggal, jam } = wib();
       const key = `${tanggal}/${nik}`;
       const rec = (await abs.get(key, { type: "json" })) || { nik, nama: emp[NAMA], tanggal };
-      if (route === "emp/status" && req.method === "GET") return J({ nama: emp[NAMA], perluPin: !ac.hash, tanggal, masuk: rec.masuk || "", pulang: rec.pulang || "", idAmbil: rec.idAmbil || "", idKembali: rec.idKembali || "" });
+      if (route === "emp/status" && req.method === "GET") return J({ nama: emp[NAMA], perluPin: !ac.hash, tanggal, masuk: rec.masuk || "", pulang: rec.pulang || "", idAmbil: rec.idAmbil || "", idKembali: rec.idKembali || "", izin: !!rec.izin, ...kelengkapan(emp) });
       if (route === "emp/absen" && req.method === "POST") {
         if (!ac.hash) return J({ error: "Buat PIN dulu sebelum absen." }, 403);
         const b = await req.json();
@@ -145,6 +186,7 @@ export default async (req) => {
         if (buf.length > 1.5e6) return J({ error: "Foto terlalu besar" }, 413);
         if (b.aksi === "masuk" && rec.masuk) return J({ ok: true, sudah: true, nama: emp[NAMA], jam: rec.masuk, aksi: "masuk" });
         if (b.aksi === "pulang" && !rec.masuk) return J({ error: "Absen masuk dulu hari ini." }, 409);
+        if (b.aksi === "masuk" && !rec.idAmbil && !rec.izin) return J({ error: "Absen masuk bisa dipakai setelah mengambil ID card, atau seizin HRD." }, 403);
         const ok = b.lat !== null && b.lat !== "" && b.lng !== null && b.lng !== "" && Number.isFinite(+b.lat) && Number.isFinite(+b.lng) && Math.abs(+b.lat) <= 90 && Math.abs(+b.lng) <= 180;
         const lok = ok ? `${(+b.lat).toFixed(5)},${(+b.lng).toFixed(5)}` : "";
         await selfie.set(`${tanggal}/${nik}/${b.aksi}`, toBuf(buf), { metadata: { type: m[1] } });
@@ -216,7 +258,7 @@ export default async (req) => {
     if (route === "karyawan" && req.method === "GET") {
       const { blobs } = await kar.list();
       const rows = await inChunks(blobs, 40, x => kar.get(x.key, { type: "json" }));
-      return J(rows.filter(Boolean));
+      return J(rows.filter(Boolean).map(r => ({ ...r, lengkap: kelengkapan(r).persen })));
     }
     if (route === "import" && req.method === "POST") {
       const { rows } = await req.json();
@@ -320,6 +362,17 @@ export default async (req) => {
       const b = await req.json(), kode = String(b.kode || "");
       if (!/^[a-z0-9-]{2,20}$/.test(kode)) return J({ error: "kode tidak valid" }, 400);
       await klien.delete(kode);
+      return J({ ok: true });
+    }
+    if (route === "izin" && req.method === "POST") {
+      const b = await req.json();
+      if (!isNik(b.nik) || !/^\d{4}-\d{2}-\d{2}$/.test(b.tanggal || "")) return J({ error: "bad request" }, 400);
+      const emp = await kar.get(b.nik, { type: "json" });
+      if (!emp) return J({ error: "karyawan tidak ditemukan" }, 404);
+      const key = `${b.tanggal}/${b.nik}`;
+      const rec = (await abs.get(key, { type: "json" })) || { nik: b.nik, nama: emp[NAMA], tanggal: b.tanggal };
+      rec.izin = !!b.izin;
+      await abs.setJSON(key, rec);
       return J({ ok: true });
     }
     if (route === "berkas" && req.method === "GET") {
