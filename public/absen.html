@@ -14,13 +14,13 @@ main{max-width:480px;margin:0 auto;padding:20px 16px}
 h1{font-size:22px;margin:0 0 2px}h2{font-size:18px;margin:0 0 4px}.sub,.hint{color:var(--mut);font-size:13px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin:16px 0 10px}
 label{display:block;font-weight:600;font-size:14px;margin:12px 0 6px}
-input{width:100%;font:inherit;font-size:18px;color:var(--ink);background:var(--bg);border:1.5px solid var(--line);border-radius:10px;padding:13px;min-height:52px}
-input:focus,button:focus-visible{outline:3px solid color-mix(in srgb,var(--pri) 45%,transparent)}
+input,select,textarea{width:100%;font:inherit;font-size:18px;color:var(--ink);background:var(--bg);border:1.5px solid var(--line);border-radius:10px;padding:13px;min-height:52px}
+input:focus,select:focus,textarea:focus,button:focus-visible{outline:3px solid color-mix(in srgb,var(--pri) 45%,transparent)}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
 .btn{font:inherit;font-weight:700;border:0;border-radius:12px;min-height:54px;background:var(--pri);color:var(--pri-ink);cursor:pointer;width:100%;margin-top:14px}
 .two .btn{margin-top:0}.btn.out{background:none;border:2px solid var(--pri);color:var(--pri)}
 .btn:disabled{opacity:.45;cursor:default}
-.lnk{background:none;border:0;color:var(--pri);font:inherit;text-decoration:underline;cursor:pointer;padding:8px 0}
+h3{font-size:15px;margin:18px 0 0;padding-top:12px;border-top:1px solid var(--line)}.lnk{background:none;border:0;color:var(--pri);font:inherit;text-decoration:underline;cursor:pointer;padding:8px 0}
 .msg{margin-top:14px;font-weight:600}.msg.ok{color:var(--ok)}.msg.bad{color:var(--err)}
 .stat{display:flex;justify-content:space-between;background:var(--bg);border-radius:10px;padding:12px;margin-top:10px;font-weight:600}
 #prev img{width:100%;max-height:340px;object-fit:cover;border-radius:12px;display:block;margin-top:12px}
@@ -61,6 +61,7 @@ input:focus,button:focus-visible{outline:3px solid color-mix(in srgb,var(--pri) 
    <div class="stat"><span>Masuk</span><span id="sm">-</span></div>
    <div class="stat"><span>Pulang</span><span id="sp">-</span></div>
    <div class="two"><button class="btn" id="bm" type="button">Absen masuk</button><button class="btn out" id="bk" type="button">Absen pulang</button></div>
+   <div class="hint" id="lock" style="margin-top:8px;color:var(--err);font-weight:600" hidden>Absen masuk bisa dipakai setelah Anda mengambil ID card (kartu di bawah) atau setelah HRD memberi izin.</div>
    <div class="hint" style="margin-top:8px">Tekan tombol, ambil foto selfie wajah Anda, lalu kirim.</div>
   </div>
   <div class="card">
@@ -70,7 +71,14 @@ input:focus,button:focus-visible{outline:3px solid color-mix(in srgb,var(--pri) 
    <div class="two"><button class="btn" id="bia" type="button">Ambil ID card</button><button class="btn out" id="bik" type="button">Kembalikan ID card</button></div>
    <div class="hint" style="margin-top:8px">Foto ID card sebagai bukti. Pastikan tulisan dan fotonya terlihat jelas.</div>
   </div>
+  <button class="btn out" id="goProf" type="button" style="margin-top:0">Lengkapi data diri</button>
   <button class="lnk" id="out" type="button">Keluar</button>
+ </section>
+ <section id="vProf" hidden>
+  <div class="card"><h2>Lengkapi data diri</h2><div class="sub" id="pp"></div><div id="pf"></div>
+   <button class="btn" id="psv" type="button">Simpan data</button><div class="msg" id="pe" role="status"></div></div>
+  <div class="card"><h2>Dokumen (opsional)</h2><div class="sub">Foto atau PDF, maksimal 3,5 MB.</div><div id="pd"></div><div class="msg" id="pde" role="status"></div></div>
+  <button class="lnk" id="pback" type="button">← Kembali ke absensi</button>
  </section>
  <input type="file" id="cam" accept="image/*" capture="user" hidden>
 </main>
@@ -79,7 +87,7 @@ const $=s=>document.querySelector(s);
 let tok="",aksi="",foto="";
 try{tok=sessionStorage.getItem("etok")||"";$("#nik").value=localStorage.getItem("nik")||""}catch(e){}
 const tick=()=>{$("#clk").textContent=new Date().toLocaleString("id-ID",{timeZone:"Asia/Jakarta",weekday:"long",day:"numeric",month:"long",year:"numeric",hour:"2-digit",minute:"2-digit"})+" WIB"};tick();setInterval(tick,20000);
-const show=v=>["vLogin","vPin","vMain"].forEach(x=>$("#"+x).hidden=x!==v);
+const show=v=>["vLogin","vPin","vMain","vProf"].forEach(x=>$("#"+x).hidden=x!==v);
 const msg=(id,t,c)=>{const m=$("#"+id);m.textContent=t;m.className="msg "+(c||"")};
 const num=e=>{e.target.value=e.target.value.replace(/\D/g,"")};["#nik","#sandi","#p1","#p2"].forEach(s=>$(s).oninput=num);
 async function api(p,opt={}){
@@ -112,7 +120,7 @@ $("#bp1").onclick=async()=>{
 async function main(){
  try{const s=await api("status");if(s.perluPin)return show("vPin");
   show("vMain");$("#hi").textContent="Halo, "+s.nama;$("#sm").textContent=s.masuk||"-";$("#sp").textContent=s.pulang||"-";$("#ia").textContent=s.idAmbil||"-";$("#ik").textContent=s.idKembali||"-";$("#bia").disabled=!!s.idAmbil;$("#bik").disabled=!!s.idKembali;
-  $("#bm").disabled=!!s.masuk;$("#bk").disabled=!s.masuk;$("#ulang").disabled=$("#kirim").disabled=false;resetPrev()}
+  const boleh=!!(s.idAmbil||s.izin);$("#bm").disabled=!!s.masuk||!boleh;$("#bk").disabled=!s.masuk;$("#lock").hidden=boleh||!!s.masuk;$("#goProf").textContent=`Lengkapi data diri (${s.persen}% terisi)`;$("#ulang").disabled=$("#kirim").disabled=false;resetPrev()}
  catch(e){msg("e1",e.message,"bad")}}
 function resetPrev(){foto="";$("#prev").hidden=true;$("#cam").value=""}
 const LB={masuk:"Selfie absen masuk",pulang:"Selfie absen pulang",idambil:"Foto ID card (pengambilan)",idkembali:"Foto ID card (pengembalian)"};
@@ -135,6 +143,51 @@ $("#kirim").onclick=async()=>{
   await main();
  }catch(e){msg("e3",e.message,"bad");bs.forEach(b=>b.disabled=false);}};
 $("#out").onclick=()=>{tok="";try{sessionStorage.removeItem("etok")}catch(e){}resetPrev();show("vLogin")};
+const DEPT=["Production","ME","Logistic","HR","Warehouse","Lainnya"],POS=["Daily Worker","Lainnya"];
+const PF=[["Departemen dan posisi",[["Departemen (Divisi)","Departemen","s",DEPT],["Posisi / Jabatan","Posisi / jabatan","s",POS]]],
+ ["Alamat domisili (tempat tinggal sekarang)",[["Alamat Domisili","Alamat lengkap","a"],["RT (Domisili)","RT","n",3],["RW (Domisili)","RW","n",3],["Kelurahan (Domisili)","Kelurahan","t"],["Kecamatan (Domisili)","Kecamatan","t"],["Kota (Domisili)","Kota / kabupaten","t"],["Provinsi (Domisili)","Provinsi","t"],["Kode Pos","Kode pos","n",5]]],
+ ["Keluarga",[["Nomor KK","Nomor Kartu Keluarga (16 digit)","n",16],["Nama Ibu Kandung","Nama lengkap ibu kandung","t"],["Nama Ayah Kandung","Nama lengkap ayah kandung","t"],["Status Tempat Tinggal","Status tempat tinggal","s",["Milik sendiri","Milik keluarga","Kontrak / sewa","Kos","Mess / asrama perusahaan","Lainnya"]]]],
+ ["Kontak",[["Nomor HP (WA)","Nomor HP (WhatsApp)","tel"],["Nomor HP 2","Nomor HP 2 (opsional)","tel"],["Nama Kontak Darurat","Nama kontak darurat","t"],["Nomor HP Darurat","Nomor HP darurat","tel"],["Hubungan Kontak Darurat","Hubungan dengan kontak darurat","s",["Orang tua","Suami / Istri","Anak","Saudara kandung","Kerabat","Teman","Lainnya"]]]],
+ ["BPJS dan NPWP (opsional)",[["Nomor BPJS Kesehatan","Nomor BPJS Kesehatan","t"],["Nomor BPJS Ketenagakerjaan","Nomor BPJS Ketenagakerjaan","t"],["Nomor NPWP","Nomor NPWP","t"]]],
+ ["Pendidikan",[["Pendidikan Terakhir","Pendidikan terakhir","s",["SD","SMP","SMA / SMK / sederajat","D1","D2","D3","D4","S1","S2","S3"]],["Nama Sekolah/Universitas","Nama sekolah / universitas","t"],["Jurusan / Bidang Keahlian","Jurusan / bidang keahlian","t"],["Tahun Kelulusan","Tahun kelulusan","n",4]]],
+ ["Rekening bank",[["Nama Bank","Nama bank","t"],["Nomor Rekening","Nomor rekening","n"]]]];
+const DOCS=[["fKk","Kartu Keluarga (KK)"],["fDiri","Foto diri"],["fTab","Foto buku tabungan"],["fCv","CV"],["fLam","Surat lamaran"],["fSim","SIM"]];
+const DN=Object.fromEntries(DOCS);let prof={data:{},berkas:[],persen:0,kurang:[]};
+const eh=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function setPct(j){prof.persen=j.persen;prof.kurang=j.kurang;
+ $("#pp").textContent=`Terisi ${j.persen}%.`+(j.kurang.length?` Belum diisi: ${j.kurang.slice(0,6).map(k=>DN[k]||k).join(", ")}${j.kurang.length>6?", dan "+(j.kurang.length-6)+" lainnya":""}.`:" Semua data lengkap.");
+ $("#goProf").textContent=`Lengkapi data diri (${j.persen}% terisi)`}
+function docsUI(){$("#pd").innerHTML=DOCS.map(([k,l])=>`<label>${l} ${prof.berkas.includes(k)?'<span style="color:var(--ok)">✓ sudah diunggah</span>':'<span class="hint">belum</span>'}</label><input type="file" accept="image/*,.pdf" data-d="${k}">`).join("")}
+function buildProf(){
+ const v=prof.data;
+ $("#pf").innerHTML=PF.map(([t,fs])=>`<h3>${t}</h3>`+fs.map(([k,l,ty,o])=>{
+  const id="pf_"+k.replace(/\W/g,""),x=v[k]||"";
+  if(ty==="s"){const lain=/^Lainnya/.test(x),cur=lain?"Lainnya":x;
+   return `<label for="${id}">${l}</label><select id="${id}" data-k="${k}"><option value="">Pilih…</option>${o.map(y=>`<option${y===cur?" selected":""}>${y}</option>`).join("")}</select>`
+    +(o.includes("Lainnya")?`<input id="${id}_l" placeholder="Sebutkan" value="${eh(lain?x.replace(/^Lainnya:?\s*/,""):"")}"${lain?"":" hidden"} style="margin-top:8px">`:"")}
+  if(ty==="a")return `<label for="${id}">${l}</label><textarea id="${id}" rows="2" data-k="${k}">${eh(x)}</textarea>`;
+  return `<label for="${id}">${l}</label><input id="${id}" data-k="${k}" value="${eh(x)}"${ty==="n"?' inputmode="numeric"':ty==="tel"?' type="tel" inputmode="tel"':""}${ty==="n"&&o?` maxlength="${o}"`:""}>`}).join("")).join("");
+ docsUI();setPct(prof)}
+$("#pf").onchange=e=>{const t=e.target;if(t.tagName==="SELECT"){const l=$("#"+t.id+"_l");if(l)l.hidden=t.value!=="Lainnya"}};
+$("#pf").oninput=e=>{if(e.target.inputMode==="numeric")e.target.value=e.target.value.replace(/\D/g,"")};
+async function openProf(){try{prof=await api("profil");msg("pe","");msg("pde","");buildProf();show("vProf")}catch(e){msg("e3",e.message,"bad")}}
+$("#goProf").onclick=openProf;$("#pback").onclick=()=>main();
+$("#psv").onclick=async()=>{
+ const d={};let bad="";
+ document.querySelectorAll("#pf [data-k]").forEach(el=>{let x=el.value.trim();
+  if(el.tagName==="SELECT"&&x==="Lainnya"){const t=$("#"+el.id+"_l").value.trim();if(!t)bad="Isi kolom “Sebutkan” untuk pilihan Lainnya.";x="Lainnya: "+t}
+  d[el.dataset.k]=x});
+ if(bad)return msg("pe",bad,"bad");
+ $("#psv").disabled=true;
+ try{const j=await api("profil",{method:"POST",body:JSON.stringify({data:d})});msg("pe","Data tersimpan. Anda bisa melengkapi sisanya kapan saja.","ok");setPct(j)}catch(e){msg("pe",e.message,"bad")}
+ $("#psv").disabled=false};
+$("#pd").onchange=e=>{
+ const el=e.target,f=el.files&&el.files[0];if(!f||!el.dataset.d)return;const k=el.dataset.d;
+ const send=async data=>{msg("pde","Mengunggah…");try{const j=await api("berkas",{method:"POST",body:JSON.stringify({key:k,name:f.name,data})});prof.berkas.push(k);docsUI();setPct(j);msg("pde",`${DN[k]} berhasil diunggah.`,"ok")}catch(x){msg("pde",x.message,"bad")}};
+ const rd=new FileReader();rd.onload=()=>{
+  if(!f.type.startsWith("image")){if(f.size>3.5e6)return msg("pde","Ukuran PDF maksimal 3,5 MB.","bad");return send(rd.result)}
+  const im=new Image();im.onload=()=>{const sc=Math.min(1,1280/Math.max(im.width,im.height)),c=document.createElement("canvas");c.width=im.width*sc;c.height=im.height*sc;c.getContext("2d").drawImage(im,0,0,c.width,c.height);send(c.toDataURL("image/jpeg",.78))};im.onerror=()=>msg("pde","Foto tidak bisa dibaca.","bad");im.src=rd.result};
+ rd.readAsDataURL(f)};
 tok?main():show("vLogin");
 </script>
 </body>
