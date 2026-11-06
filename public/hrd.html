@@ -58,12 +58,12 @@ th{color:var(--mut);font-weight:600}
   <input type="search" id="q" placeholder="Cari nama, NIK, atau departemen">
   <div class="row"><span class="mut" id="cnt" style="align-self:center">0 karyawan</span><button class="btn g" id="del" disabled style="margin-left:auto;color:var(--err);border-color:var(--err)">Hapus terpilih</button><button class="btn g" id="rpin" disabled>Reset PIN terpilih</button><button class="btn g" id="exp">Unduh Excel</button></div>
  </div>
- <div class="card wrap"><table><thead><tr><th><input type="checkbox" id="all" aria-label="Pilih semua"></th><th>Nama</th><th>NIP</th><th>NIK</th><th>Departemen</th><th>Posisi</th><th>HP (WA)</th><th>Usia</th><th>MCU</th><th>Berkas</th></tr></thead><tbody id="tb"></tbody></table><div class="mut" id="emp" style="padding-top:10px"></div></div>
+ <div class="card wrap"><table><thead><tr><th><input type="checkbox" id="all" aria-label="Pilih semua"></th><th>Nama</th><th>NIP</th><th>NIK</th><th>Departemen</th><th>Posisi</th><th>HP (WA)</th><th>Usia</th><th>Lengkap</th><th>MCU</th><th>Berkas</th></tr></thead><tbody id="tb"></tbody></table><div class="mut" id="emp" style="padding-top:10px"></div></div>
 </section>
 <section id="abs" hidden>
  <div class="card"><div class="row" style="margin-top:0"><input type="date" id="ad" style="flex:1;min-width:150px"><button class="btn g" id="aex">Unduh Excel bulan ini</button></div>
   <div class="st" id="as" style="grid-template-columns:repeat(2,1fr)"></div></div>
- <div class="card wrap"><table><thead><tr><th>Nama</th><th>Departemen</th><th>Masuk</th><th>Pulang</th><th>Lokasi</th><th>ID card (ambil / kembali)</th><th>Foto</th></tr></thead><tbody id="atb"></tbody></table></div>
+ <div class="card wrap"><table><thead><tr><th>Nama</th><th>Departemen</th><th>Masuk</th><th>Pulang</th><th>Lokasi</th><th>ID card (ambil / kembali)</th><th>Foto</th><th>Izin absen</th></tr></thead><tbody id="atb"></tbody></table></div>
 </section>
 <section id="kl" hidden>
  <div class="card klf"><b>Akun klien</b>
@@ -78,10 +78,10 @@ th{color:var(--mut);font-weight:600}
 </main>
 <script>
 const DEPT=["Production","ME","Logistic","HR","Warehouse"];
-const H=["Timestamp Registrasi","NIP Pegawai","Email Address","Nama Lengkap Sesuai KTP","Tempat Lahir","Tanggal Lahir","Usia","Status Perkawinan","Jenis Kelamin","Agama","Departemen (Divisi)","Posisi / Jabatan 1","Posisi / Jabatan 2","Posisi / Jabatan 3","Posisi / Jabatan 4","Posisi / Jabatan 5","Posisi / Jabatan 6","Posisi / Jabatan 7","Alamat Domisili","RT (Domisili)","RW (Domisili)","Kelurahan (Domisili)","Kecamatan (Domisili)","Kota (Domisili)","Provinsi (Domisili)","NIK (KTP)","Nomor KK","Alamat Lengkap Sesuai KTP","RT (KTP)","RW (KTP)","Kelurahan (KTP)","Kecamatan (KTP)","Kota (KTP)","Provinsi (KTP)","Kode Pos","Nomor HP (WA)","Nomor HP 2","Nomor HP Darurat","Nama Kontak Darurat","Hubungan Kontak Darurat","Nama Ibu Kandung","Nama Ayah Kandung","Status Tempat Tinggal","Nomor BPJS Kesehatan","Nomor BPJS Ketenagakerjaan","Pendidikan Terakhir","Nama Sekolah/Universitas","Jurusan / Bidang Keahlian","Tahun Kelulusan","Nomor NPWP","Nomor Rekening","Nama Bank","Link Foto Buku Tabungan","Link Foto KTP","Link Foto SIM","Link Foto KK","Link Surat Lamaran","Link CV","Link Ijazah","Link Foto Diri"];
+const H=["Timestamp Registrasi","NIP Pegawai","Email Address","Nama Lengkap Sesuai KTP","Tempat Lahir","Tanggal Lahir","Usia","Status Perkawinan","Jenis Kelamin","Agama","Departemen (Divisi)","Posisi / Jabatan","Alamat Domisili","RT (Domisili)","RW (Domisili)","Kelurahan (Domisili)","Kecamatan (Domisili)","Kota (Domisili)","Provinsi (Domisili)","NIK (KTP)","Nomor KK","Alamat Lengkap Sesuai KTP","RT (KTP)","RW (KTP)","Kelurahan (KTP)","Kecamatan (KTP)","Kota (KTP)","Provinsi (KTP)","Kode Pos","Nomor HP (WA)","Nomor HP 2","Nomor HP Darurat","Nama Kontak Darurat","Hubungan Kontak Darurat","Nama Ibu Kandung","Nama Ayah Kandung","Status Tempat Tinggal","Nomor BPJS Kesehatan","Nomor BPJS Ketenagakerjaan","Pendidikan Terakhir","Nama Sekolah/Universitas","Jurusan / Bidang Keahlian","Tahun Kelulusan","Nomor NPWP","Nomor Rekening","Nama Bank","Link Foto Buku Tabungan","Link Foto KTP","Link Foto SIM","Link Foto KK","Link Surat Lamaran","Link CV","Link Ijazah","Link Foto Diri"];
 const NAME="Nama Lengkap Sesuai KTP",NIK="NIK (KTP)",$=s=>document.querySelector(s);
 const norm=s=>String(s).toLowerCase().replace(/[^a-z0-9]/g,"");
-const MAP=Object.fromEntries(H.map(h=>[norm(h),h]));
+const MAP=Object.fromEntries(H.map(h=>[norm(h),h]));MAP[norm("Posisi / Jabatan 1")]="Posisi / Jabatan";
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 let col=null,rows=[],valid=[];
 
@@ -121,6 +121,7 @@ $("#file").onchange=async e=>{
    if(!Object.values(r).some(Boolean)){blank++;return}
    ["NIK (KTP)","Nomor KK"].forEach(h=>r[h]=digits(r[h]));
    {const dn=r["Departemen (Divisi)"];if(dn){const f=DEPT.find(x=>x.toLowerCase()===dn.toLowerCase());r["Departemen (Divisi)"]=f||(/^lainnya/i.test(dn)?dn:"Lainnya: "+dn)}}
+   {const pn=r["Posisi / Jabatan"];if(pn)r["Posisi / Jabatan"]=/^daily\s*worker$/i.test(pn)?"Daily Worker":(/^lainnya/i.test(pn)?pn:"Lainnya: "+pn)}
    r["Tanggal Lahir"]=r["Tanggal Lahir"]?(parseDate(r["Tanggal Lahir"])||false):"";
    const er=check(r);if(r[NIK]&&seen.has(r[NIK]))er.push("NIK ganda di file");seen.add(r[NIK]);
    if(er.length)return errs.push({n:i+2,nama:r[NAME],er});
@@ -149,12 +150,12 @@ let all=[];const LBL={fKtp:"KTP",fKk:"KK",fDiri:"Foto",fTab:"Tabungan",fIjz:"Ija
 function draw(){
  const q=$("#q").value.toLowerCase(),L=all.filter(r=>[r[NAME],r[NIK],r["NIP Pegawai"],r["Departemen (Divisi)"]].join(" ").toLowerCase().includes(q));
  FL=L;updDel();$("#cnt").textContent=`${L.length} dari ${all.length} karyawan`;
- $("#tb").innerHTML=L.slice(0,300).map(r=>`<tr><td><input type="checkbox" class="ck" data-n="${esc(r[NIK])}"${SEL.has(r[NIK])?" checked":""}></td><td>${esc(r[NAME])}</td><td>${esc(r["NIP Pegawai"])}</td><td>${esc(r[NIK])}</td><td>${esc(r["Departemen (Divisi)"])}</td><td>${esc(r["Posisi / Jabatan 1"])}</td><td>${esc(r["Nomor HP (WA)"])}</td><td>${esc(age(r["Tanggal Lahir"]))}</td><td>${mcuTxt(r[NIK])}</td><td>${(r.berkas||[]).map(k=>`<a href="#" data-n="${esc(r[NIK])}" data-k="${k}">${LBL[k]||k}</a>`).join(" ")}</td></tr>`).join("");
+ $("#tb").innerHTML=L.slice(0,300).map(r=>`<tr><td><input type="checkbox" class="ck" data-n="${esc(r[NIK])}"${SEL.has(r[NIK])?" checked":""}></td><td>${esc(r[NAME])}</td><td>${esc(r["NIP Pegawai"])}</td><td>${esc(r[NIK])}</td><td>${esc(r["Departemen (Divisi)"])}</td><td>${esc(r["Posisi / Jabatan"]||r["Posisi / Jabatan 1"])}</td><td>${esc(r["Nomor HP (WA)"])}</td><td>${esc(age(r["Tanggal Lahir"]))}</td><td>${r.lengkap??"-"}%</td><td>${mcuTxt(r[NIK])}</td><td>${(r.berkas||[]).map(k=>`<a href="#" data-n="${esc(r[NIK])}" data-k="${k}">${LBL[k]||k}</a>`).join(" ")}</td></tr>`).join("");
  $("#emp").textContent=all.length?(L.length>300?"Menampilkan 300 pertama. Persempit pencarian.":""):"Belum ada data. Mulai dari tab Impor massal."}
 $("#q").oninput=draw;
 
 $("#exp").onclick=()=>{
- const data=all.map(r=>{const o={};H.forEach(h=>o[h]=h==="Usia"?age(r["Tanggal Lahir"]):(r[h]??""));const m=MC[r[NIK]]||{};o["Klien"]=m.klienNama||"";o["Status MCU"]=m.status||"";o["Tanggal MCU"]=m.tanggal||"";return o});
+ const data=all.map(r=>{const o={};H.forEach(h=>o[h]=h==="Usia"?age(r["Tanggal Lahir"]):h==="Posisi / Jabatan"?(r[h]??r["Posisi / Jabatan 1"]??""):(r[h]??""));const m=MC[r[NIK]]||{};o["Klien"]=m.klienNama||"";o["Status MCU"]=m.status||"";o["Tanggal MCU"]=m.tanggal||"";return o});
  const w=XLSX.utils.book_new(),s=XLSX.utils.json_to_sheet(data,{header:[...H,"Klien","Status MCU","Tanggal MCU"]});s["!cols"]=H.map(h=>({wch:Math.max(16,h.length+2)}));
  XLSX.utils.book_append_sheet(w,s,"Data Karyawan");
  XLSX.writeFile(w,"database-karyawan-"+new Date().toISOString().slice(0,10)+".xlsx")};
@@ -181,7 +182,8 @@ async function login(){
  }catch(e){$("#lge").textContent=e.message==="Failed to fetch"?"Tidak ada koneksi.":"Gagal masuk: "+e.message}
  $("#lgb").disabled=false}
 $("#lgb").onclick=login;$("#pw").onkeydown=e=>{if(e.key==="Enter")login()};
-const SEL=new Set();let FL=[],AB=[],abBulan="";const LF={masuk:"Selfie masuk",pulang:"Selfie pulang",idambil:"ID ambil",idkembali:"ID kembali"};
+const SEL=new Set();let FL=[],AB=[],abBulan="";const izinCell=(r,a,d)=>a&&a.idAmbil?"–":a&&a.izin?`✓ Diizinkan <a href="#" data-iz="0" data-n="${esc(r[NIK])}" data-d="${d}">Cabut</a>`:`<a href="#" data-iz="1" data-n="${esc(r[NIK])}" data-d="${d}">Izinkan</a>`;
+const LF={masuk:"Selfie masuk",pulang:"Selfie pulang",idambil:"ID ambil",idkembali:"ID kembali"};
 function updDel(){const n=SEL.size,b=$("#del");b.disabled=!n;$("#rpin").disabled=!n;b.textContent=n?`Hapus terpilih (${n})`:"Hapus terpilih";$("#all").checked=FL.length>0&&FL.every(r=>SEL.has(r[NIK]))}
 $("#tb").addEventListener("change",e=>{const c=e.target.closest(".ck");if(!c)return;c.checked?SEL.add(c.dataset.n):SEL.delete(c.dataset.n);updDel()});
 $("#all").onchange=e=>{FL.forEach(r=>e.target.checked?SEL.add(r[NIK]):SEL.delete(r[NIK]));draw()};
@@ -196,19 +198,19 @@ async function loadAbs(){const d=$("#ad");if(!d.value)d.value=wibToday();const m
  if(m!==abBulan){try{AB=await(await api("absensi?bulan="+m)).json();abBulan=m}catch(e){return}}drawAbs()}
 function drawAbs(){const d=$("#ad").value,mp=Object.fromEntries(AB.filter(x=>x.tanggal===d).map(x=>[x.nik,x]));
  const rows=all.map(r=>({r,a:mp[r[NIK]]})).sort((x,y)=>(!!y.a-!!x.a)||String(x.r[NAME]).localeCompare(String(y.r[NAME])));
- const hadir=rows.filter(x=>x.a).length;
+ const hadir=rows.filter(x=>x.a&&x.a.masuk).length;
  $("#as").innerHTML=`<div class="ok"><b>${hadir}</b><span>sudah absen</span></div><div class="bad"><b>${rows.length-hadir}</b><span>belum absen</span></div><div><b>${rows.length}</b><span>total</span></div><div class="bad"><b>${rows.filter(x=>x.a&&x.a.idAmbil&&!x.a.idKembali).length}</b><span>ID card belum kembali</span></div>`;
  const maps=l=>l?`<a href="https://maps.google.com/?q=${esc(l)}" target="_blank" rel="noopener">Peta</a>`:"";
- $("#atb").innerHTML=rows.map(({r,a})=>`<tr><td>${esc(r[NAME])}</td><td>${esc(r["Departemen (Divisi)"])}</td><td>${a?esc(a.masuk||"-"):"-"}</td><td>${a?esc(a.pulang||"-"):"-"}</td><td>${a?maps(a.lokMasuk):""}</td><td>${a?esc(a.idAmbil||"-")+" / "+esc(a.idKembali||"-"):""}</td><td>${a?["masuk","pulang","idambil","idkembali"].filter(k=>a["foto"+k[0].toUpperCase()+k.slice(1)]).map(k=>`<a href="#" data-f="${k}" data-d="${d}" data-n="${esc(a.nik)}">${LF[k]}</a>`).join(" "):""}</td></tr>`).join("")}
+ $("#atb").innerHTML=rows.map(({r,a})=>`<tr><td>${esc(r[NAME])}</td><td>${esc(r["Departemen (Divisi)"])}</td><td>${a?esc(a.masuk||"-"):"-"}</td><td>${a?esc(a.pulang||"-"):"-"}</td><td>${a?maps(a.lokMasuk):""}</td><td>${a?esc(a.idAmbil||"-")+" / "+esc(a.idKembali||"-"):""}</td><td>${a?["masuk","pulang","idambil","idkembali"].filter(k=>a["foto"+k[0].toUpperCase()+k.slice(1)]).map(k=>`<a href="#" data-f="${k}" data-d="${d}" data-n="${esc(a.nik)}">${LF[k]}</a>`).join(" "):""}</td><td>${izinCell(r,a,d)}</td></tr>`).join("")}
 $("#ad").onchange=loadAbs;
 $("#aex").onclick=()=>{const dep=Object.fromEntries(all.map(r=>[r[NIK],r["Departemen (Divisi)"]]));
- const data=[...AB].sort((a,b)=>a.tanggal.localeCompare(b.tanggal)||String(a.nama).localeCompare(String(b.nama))).map(a=>({Tanggal:a.tanggal,NIK:a.nik,Nama:a.nama,Departemen:dep[a.nik]||"",Masuk:a.masuk||"",Pulang:a.pulang||"","ID card diambil":a.idAmbil||"","ID card dikembalikan":a.idKembali||"","Lokasi masuk":a.lokMasuk||"","Lokasi pulang":a.lokPulang||""}));
+ const data=[...AB].filter(a=>a.masuk||a.idAmbil||a.pulang).sort((a,b)=>a.tanggal.localeCompare(b.tanggal)||String(a.nama).localeCompare(String(b.nama))).map(a=>({Tanggal:a.tanggal,NIK:a.nik,Nama:a.nama,Departemen:dep[a.nik]||"",Masuk:a.masuk||"",Pulang:a.pulang||"","ID card diambil":a.idAmbil||"","ID card dikembalikan":a.idKembali||"","Lokasi masuk":a.lokMasuk||"","Lokasi pulang":a.lokPulang||""}));
  if(!data.length)return alert("Belum ada data absensi bulan ini.");
  const w=XLSX.utils.book_new();XLSX.utils.book_append_sheet(w,XLSX.utils.json_to_sheet(data),"Absensi");XLSX.writeFile(w,"absensi-"+abBulan+".xlsx")};
 $("#rpin").onclick=async()=>{const ids=[...SEL];if(!ids.length)return;
  if(!confirm(`Reset PIN ${ids.length} karyawan? Mereka harus membuat PIN baru memakai tanggal lahir (DDMMYYYY).`))return;
  try{for(let i=0;i<ids.length;i+=50)await api("resetpin",{method:"POST",body:JSON.stringify({niks:ids.slice(i,i+50)})});alert("PIN berhasil direset.")}catch(e){alert("Gagal mereset PIN.")}};
-$("#atb").onclick=async e=>{const a=e.target.closest("a[data-f]");if(!a)return;e.preventDefault();const w=window.open("","_blank");
+$("#atb").onclick=async e=>{const z=e.target.closest("a[data-iz]");if(z){e.preventDefault();try{await api("izin",{method:"POST",body:JSON.stringify({nik:z.dataset.n,tanggal:z.dataset.d,izin:z.dataset.iz==="1"})});abBulan="";await loadAbs()}catch(x){alert("Gagal menyimpan izin.")}return}const a=e.target.closest("a[data-f]");if(!a)return;e.preventDefault();const w=window.open("","_blank");
  try{const r=await api(`selfie?tanggal=${a.dataset.d}&nik=${a.dataset.n}&aksi=${a.dataset.f}`);w.location=URL.createObjectURL(await r.blob())}catch(x){if(w)w.close();alert("Foto tidak bisa dibuka.")}};
 const nprev=()=>{const p=$("#npre").value,d=Math.max(1,+$("#ndig").value||5),n=+$("#nnext").value||1;$("#nprev").textContent="NIP berikutnya: "+p+String(n).padStart(d,"0")};
 ["npre","ndig","nnext"].forEach(i=>$("#"+i).oninput=nprev);
