@@ -161,8 +161,9 @@ $("#exp").onclick=()=>{
  XLSX.writeFile(w,"database-karyawan-"+new Date().toISOString().slice(0,10)+".xlsx")};
 
 $("#tb").onclick=async e=>{const a=e.target.closest("a[data-k]");if(!a)return;e.preventDefault();const w=window.open("","_blank");
- try{const r=await api(`berkas?nik=${a.dataset.n}&key=${a.dataset.k}`);w.location=URL.createObjectURL(await r.blob())}catch(x){if(w)w.close();alert("Berkas tidak bisa dibuka.")}};
+ try{const r=await api(`berkas?nik=${a.dataset.n}&key=${a.dataset.k}`);w.location=URL.createObjectURL(await asBlob(r))}catch(x){if(w)w.close();alert("Berkas tidak bisa dibuka.")}};
 
+const asBlob=async r=>{if((r.headers.get("content-type")||"").includes("json")){const j=await r.json();return await(await fetch(j.data)).blob()}return await r.blob()};
 let MC={};const fd=v=>v?v.split("-").reverse().join("/"):"";
 const mcuTxt=n=>{const m=MC[n];return m?esc((m.status==="Sudah"?"Sudah":"Belum")+(m.tanggal?" · "+fd(m.tanggal):"")):"-"};
 let tok="";try{tok=sessionStorage.getItem("tok")||""}catch(e){}
@@ -211,7 +212,7 @@ $("#rpin").onclick=async()=>{const ids=[...SEL];if(!ids.length)return;
  if(!confirm(`Reset PIN ${ids.length} karyawan? Mereka harus membuat PIN baru memakai tanggal lahir (DDMMYYYY).`))return;
  try{for(let i=0;i<ids.length;i+=50)await api("resetpin",{method:"POST",body:JSON.stringify({niks:ids.slice(i,i+50)})});alert("PIN berhasil direset.")}catch(e){alert("Gagal mereset PIN.")}};
 $("#atb").onclick=async e=>{const z=e.target.closest("a[data-iz]");if(z){e.preventDefault();try{await api("izin",{method:"POST",body:JSON.stringify({nik:z.dataset.n,tanggal:z.dataset.d,izin:z.dataset.iz==="1"})});abBulan="";await loadAbs()}catch(x){alert("Gagal menyimpan izin.")}return}const a=e.target.closest("a[data-f]");if(!a)return;e.preventDefault();const w=window.open("","_blank");
- try{const r=await api(`selfie?tanggal=${a.dataset.d}&nik=${a.dataset.n}&aksi=${a.dataset.f}`);w.location=URL.createObjectURL(await r.blob())}catch(x){if(w)w.close();alert("Foto tidak bisa dibuka.")}};
+ try{const r=await api(`selfie?tanggal=${a.dataset.d}&nik=${a.dataset.n}&aksi=${a.dataset.f}`);w.location=URL.createObjectURL(await asBlob(r))}catch(x){if(w)w.close();alert("Foto tidak bisa dibuka.")}};
 const nprev=()=>{const p=$("#npre").value,d=Math.max(1,+$("#ndig").value||5),n=+$("#nnext").value||1;$("#nprev").textContent="NIP berikutnya: "+p+String(n).padStart(d,"0")};
 ["npre","ndig","nnext"].forEach(i=>$("#"+i).oninput=nprev);
 async function loadNip(){try{const c=await(await api("nip")).json();$("#npre").value=c.prefix;$("#ndig").value=c.digits;$("#nnext").value=c.next;nprev()}catch(e){}}
